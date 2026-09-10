@@ -34,9 +34,11 @@ button.go{background:var(--gold);color:#1A1A1A;font-weight:800}
 button.go:disabled{background:var(--goldd);color:#00000066;cursor:default}
 button.ghost{background:none;border-color:var(--line);color:var(--dim)}
 button:focus-visible{outline:2px solid var(--goldl);outline-offset:2px}
-input[type=text]{background:#111;border:1px solid var(--line);color:var(--fg);
+input[type=text],input[type=email]{background:#111;border:1px solid var(--line);color:var(--fg);
 border-radius:6px;padding:13px;font-size:16px;font-family:inherit;width:100%}
-input[type=text]:focus-visible{outline:2px solid var(--goldl);outline-offset:1px}
+input[type=text]:focus-visible,input[type=email]:focus-visible{outline:2px solid var(--goldl);outline-offset:1px}
+.hp{position:absolute;left:-9999px;height:0;overflow:hidden}
+.mailk input{width:100%;max-width:360px;display:block;margin:0 0 10px}
 .nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:22px}
 .hint{font-size:12.5px;color:var(--dim)}
 
@@ -51,13 +53,6 @@ border:1px solid var(--line);border-radius:8px;padding:11px 14px}
 border-radius:6px;padding:6px 8px;font-family:inherit;font-size:13px}
 .zeile select:focus-visible{outline:2px solid var(--goldl);outline-offset:1px}
 .zeile select.auto{border-color:var(--goldd);color:var(--goldl)}
-.zeile select.wicht{color:var(--fg);min-width:74px}
-.zeile select.wicht.leer{color:var(--dim);border-color:var(--line)}
-.zeile select.wicht:not(.leer){border-color:var(--goldd)}
-.intro{max-width:640px}
-.intro h1{margin-bottom:.35em}
-.intro .lead{font-size:19px;line-height:1.55;color:#EDEDED;margin:0 0 1.1em}
-.intro .meta{color:var(--dim);font-size:15px;margin:0 0 26px}
 .warn{border:1px solid var(--gold);border-left-width:3px;border-radius:8px;
 background:#2A2114;padding:14px 16px;margin:0 0 14px;color:var(--fg);max-width:60ch}
 .warn b{color:var(--goldl)}
@@ -211,8 +206,6 @@ border:1px solid var(--line);border-radius:8px;padding:10px 14px}
 .wert .z{color:var(--gold);font-weight:800;font-size:21px;
 font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
 .wert .b{font-size:14px;color:var(--dim);flex:1}
-.wert .lk{font-size:13px;color:var(--goldl);font-variant-numeric:tabular-nums;
-white-space:nowrap}
 .wert.leer .z{color:var(--goldd)}
 @media(max-width:520px){.wrap{padding:20px 15px 52px}h1{font-size:26px}}
 </style></head><body>
@@ -245,6 +238,133 @@ const ESSENZIELL = [
   {id:'ges',  name:'Gesundheit',   lang:'Gesundheit und Energie',
    kern:['gesund','fitness','körper','koerper','figur','aussehen'],
    auch:['sport','ernährung','ernaehrung','schlaf']}];
+
+/* ====================== Die zehn Intelligenzen ======================
+   🔴 Franks Entscheidung vom 10.09.2026 (Weg 1): die zehn Buecher sind die gemeinsame
+   Messachse des Mastermind Profile. Die Achse gilt nur fuer Life Wheel und Habit Score
+   — beide sind bereichsfoermig. Freedom Score und Personality Score gehoeren
+   ausdruecklich NICHT darauf, das sind andere Messarten.
+
+   Ein Lebensrad-Bereich ist breiter als eine Achse: „Gesundheit" enthaelt Koerper
+   (Fitness) UND Erholung (Energie). Deshalb ist die Zuordnung ein VORSCHLAG, den der
+   Nutzer auf der Ergebnisseite aendern kann — nicht ein weiteres Pflichtfeld vorne.
+   Die Reihenfolge ist die der Achsentabelle. `kern` zaehlt doppelt, `auch` einfach,
+   dasselbe Verfahren wie bei autoZuordnen() und den Unterkriterien. */
+const ACHSEN = [
+  {id:'core',  name:'Inner Core',
+   kern:['selbstwert','selbstvertrauen','identit','selbstbild','selbstannahme'],
+   auch:['ich selbst','innere','fundament','authentiz']},
+  {id:'change', name:'Inner Change',
+   kern:['entwicklung','wachstum','veraenderung','veränderung','persoenlich','persönlich'],
+   auch:['lernen','selbst','fortschritt','komfortzone','mindset']},
+  {id:'leben', name:'Lebensintelligenz',
+   kern:['krise','resilienz','rueckschlag','rückschlag','schicksal'],
+   auch:['akzeptanz','loslassen','vergaeng','vergäng']},
+  {id:'energie', name:'Energieintelligenz',
+   kern:['energie','schlaf','erholung','regeneration','entspannung','stress'],
+   auch:['freizeit','ausgleich','musse','muße','ruhe','balance','erholungswert']},
+  {id:'fitness', name:'Fitnessintelligenz',
+   kern:['gesundheit','fitness','koerper','körper','ernaehrung','ernährung','figur'],
+   auch:['sport','training','aussehen','gewicht','kraft','ausdauer']},
+  {id:'planung', name:'Planungsintelligenz',
+   kern:['ziel','planung','vision','sinn','werte','spirit','glaube','religio'],
+   auch:['richtung','prioritaet','priorität','zukunft','seele','achtsamkeit','berufung']},
+  {id:'time', name:'Time Transformation',
+   /* 🔴 NICHT einfach „zeit": das steckt in „Freizeit" und „Arbeitszeit" und zog beide
+      hierher. Time Transformation misst den Schutz der Zeit, nicht ihre Verwendung. */
+   kern:['zeitmanagement','zeiteinteilung','meine zeit','fokus','ablenkung','konzentration'],
+   auch:['flow','termine','kalender','effizienz','produktiv']},
+  {id:'umsetzung', name:'Umsetzungsintelligenz',
+   kern:['beruf','karriere','arbeit','job','unternehm','business','firma','geschaeft',
+         'geschäft','umsetzung'],
+   auch:['disziplin','gewohnheit','dranbleiben','wirksamkeit','leistung','projekt']},
+  {id:'social', name:'Social Value',
+   kern:['beziehung','liebe','partner','ehe','familie','freunde','sozial','kontakt'],
+   auch:['netzwerk','umfeld','gemeinschaft','beitrag','ehrenamt','engagement',
+         'zurueckgeben','zurückgeben','kinder','eltern']},
+  {id:'finanz', name:'Finanzielle Intelligenz',
+   kern:['finanz','geld','vermoegen','vermögen','einkommen','wohlstand'],
+   auch:['sparen','investment','rendite','schulden','absicherung']},
+];
+
+/* Schlaegt je Bereich eine Achse vor. 🔴 Ein von Hand gesetzter Wert wird nie
+   ueberschrieben — dieselbe Regel wie bei den essenziellen Bereichen, sonst kippt die
+   Auswahl beim naechsten Neuzeichnen zurueck. */
+function achsenVorschlagen(){
+  bereiche.forEach(b => {
+    if (b.achse && !b.achseAuto) return;         // Entscheidung des Nutzers
+    const n = b.name.toLowerCase();
+    let best = null, bp = 0;
+    /* 🔴 Gezaehlt wird die LAENGE der Treffer, nicht ihre Anzahl. „Gesundheit und
+       Energie" — der Standardvorschlag des Lebensrads — landete sonst bei Energie,
+       weil beide genau einen Treffer haben; „gesundheit" ist aber das speziellere
+       Wort. Dieselbe Regel wie bei den Unterkriterien: bei Gleichstand gewinnt das
+       laengste Suchwort. Kernwoerter zaehlen doppelt. */
+    const punkte = (woerter, gewicht) => woerter
+      .filter(w => n.includes(w))
+      .reduce((summe, w) => summe + w.length * gewicht, 0);
+    ACHSEN.forEach(a => {
+      const p = punkte(a.kern, 2) + punkte(a.auch, 1);
+      if (p > bp){ best = a; bp = p; }
+    });
+    b.achse = best ? best.id : null;
+    b.achseAuto = true;
+  });
+}
+/* Werte je Achse fuer den Sendesatz — volle Bandnamen, so verlangt es der Satzaufbau
+   („Energieintelligenz", nicht „Energie"). Mehrere Bereiche auf derselben Achse werden
+   gemittelt; Bereiche ohne Zuordnung fallen raus statt als 0 zu zaehlen. */
+function achsenWerte(skala){
+  /* 🔴 skala=100 fuer den Sendesatz. Das Feld `achsen` ist das EINZIGE, ueber das sich
+     die Tests des Mastermind Profile spaeter verrechnen lassen — Habit Score liefert
+     dort 0–100. Das Lebensrad rechnet intern auf 0–10, deshalb wird beim Senden
+     umskaliert; die Anzeige bleibt in der Sprache des Tests. */
+  const f = (skala === 100) ? 10 : 1;
+  const topf = {};
+  bereiche.forEach(b => {
+    if (!b.achse) return;
+    const a = ACHSEN.find(x => x.id === b.achse);
+    if (!a) return;
+    (topf[a.name] = topf[a.name] || []).push(wertVon(b));
+  });
+  const aus = {};
+  ACHSEN.forEach(a => {
+    const w = topf[a.name];
+    if (w && w.length) aus[a.name] = Math.round(w.reduce((x,y) => x+y, 0) / w.length * f * 10) / 10;
+  });
+  return aus;
+}
+function achseSetzen(i, id){
+  bereiche[i].achse = id || null;
+  bereiche[i].achseAuto = false;                 // ab jetzt Entscheidung, kein Vorschlag
+  render(); entwurfMerken();
+}
+/* Die Einordnung steht auf der Ergebnisseite, aufklappbar. Dort hat sie einen Nutzen
+   („so haengt dein Rad mit den zehn Buechern zusammen"), vorne waere sie eine Huerde. */
+function achsenHtml(){
+  achsenVorschlagen();
+  const w = achsenWerte();
+  const offen = bereiche.filter(b => !b.achse);
+  return `<p>Deine Bereiche hast du selbst benannt. Damit sich dein Rad mit den anderen
+    Tests vergleichen laesst, ordnen wir jeden einer der zehn Intelligenzen zu — als
+    Vorschlag. ${offen.length ? `<b>${offen.length}</b> ${offen.length === 1
+      ? 'Bereich passt zu keiner' : 'Bereiche passen zu keiner'} — sag uns, wohin.`
+      : 'Aendere, was nicht passt.'}</p>
+    <div class="liste">${bereiche.map((b,i) => `
+      <div class="zeile"><span class="t">${esc(b.name)}</span>
+      <span class="w">${zahl1(wertVon(b))}</span>
+      <select onchange="achseSetzen(${i}, this.value)"
+        aria-label="Intelligenz fuer ${esc(b.name)}"
+        class="${b.achseAuto && b.achse ? 'auto' : ''}">
+        <option value=""${b.achse ? '' : ' selected'}>— nicht zugeordnet</option>
+        ${ACHSEN.map(a => `<option value="${a.id}"${b.achse === a.id ? ' selected' : ''}
+          >${a.name}</option>`).join('')}
+      </select></div>`).join('')}
+    </div>
+    <p class="hint">Mehrere Bereiche auf derselben Intelligenz werden gemittelt.
+    ${Object.keys(w).length} von 10 Intelligenzen sind durch dein Rad abgedeckt — die
+    uebrigen fuellen die anderen Tests.</p>`;
+}
 
 /* Ordnet die drei essenziellen Bereiche selbst zu: je essenziellem Bereich gewinnt der
    Bereich mit den meisten Treffern, bei Gleichstand das laengste Suchwort — dasselbe
@@ -280,52 +400,20 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
    waren die Vorschlaege fuer die Unterkriterien nicht anklickbar (03.09.2026). */
 const arg = s => esc(JSON.stringify(String(s)));
 
-let bereiche = [];          // {name, wert, wichtig}  null solange nicht gesetzt
+let bereiche = [];          // {name, wert}  wert = null solange nicht ausgemalt
 let seite = 0;              // 0 = Bereiche anlegen, 1 = Rad
-/* Die Startseite ist bewusst KEINE eigene Seitennummer: sonst verschiebt sich die
-   ganze Kette (Entwurf, Sprungziele, Beschriftungen) fuer einen Bildschirm, der
-   genau einmal vorkommt. Ein Flag, das der Entwurf ueberschreibt. */
-let intro = true;
-
-function introSeite(){
-  app.innerHTML = `
-  <div class="intro">
-    <h1>Wo stehst du im Leben &mdash; und was ist dir wichtig?</h1>
-    <p class="lead">Das Lebensrad zeigt beides nebeneinander: wie wichtig dir ein
-    Bereich ist und wie voll er gerade l&auml;uft. Der gr&ouml;&szlig;te Abstand
-    zwischen beidem ist dein n&auml;chster Schritt &mdash; nicht der Bereich, der
-    am schlechtesten dasteht.</p>
-    <p class="meta">Vier bis acht eigene Bereiche &middot; dein Tempo &middot;
-    l&auml;uft in deinem Browser, dein Zwischenstand bleibt erhalten</p>
-    <div class="nav">
-      <button class="go" onclick="intro=false;render();window.scrollTo(0,0)">Anfangen</button>
-    </div>
-  </div>`;
-}
 let zeigeVorschlaege = false;
 
 /* ============================ Seite 1: Bereiche ============================ */
 function anlegen(){
   app.innerHTML = `
-  <h2>Schritt 1 von 3</h2>
-  <h1>Welche Bereiche hat dein Leben — und was ist dir wichtig?</h1>
+  <h2>Schritt 1 von 5</h2>
+  <h1>Welche Bereiche hat dein Leben?</h1>
   <p>Schreib sie so auf, wie <b>du</b> sie nennst — nicht wie sie in einem Buch heißen.
   Vier bis acht Stück. Wenn dir „Liebe“ näher ist als „Partnerschaft“, dann schreib Liebe.</p>
-  <p>Sag zu jedem gleich dazu, <b>wie wichtig er dir ist</b> — von 1 (nebensächlich) bis
-  10 (daran hängt alles). Das ist nicht dasselbe wie „läuft gut“: Im nächsten Schritt
-  malst du aus, wie voll jeder Bereich <i>tatsächlich</i> ist. Der Abstand zwischen
-  beidem ist das, worauf es hinausläuft.</p>
 
   <div class="liste">${bereiche.map((b,i) => `
     <div class="zeile"><span class="n">${i+1}</span><span class="t">${esc(b.name)}</span>
-    <select class="wicht${b.wichtig === null ? ' leer' : ''}"
-      onchange="wichtigSetzen(${i}, this.value)"
-      aria-label="Wichtigkeit für ${esc(b.name)}"
-      title="Wie wichtig ist dir dieser Bereich? 1 = nebensächlich, 10 = daran hängt alles">
-      <option value=""${b.wichtig === null ? ' selected' : ''}>wichtig?</option>
-      ${[10,9,8,7,6,5,4,3,2,1].map(w => `<option value="${w}"${b.wichtig === w
-        ? ' selected' : ''}>wichtig ${w}</option>`).join('')}
-    </select>
     <select onchange="zuordnen(${i}, this.value)" aria-label="Zuordnung für ${esc(b.name)}"
       class="${b.essAuto ? 'auto' : ''}" title="${b.essAuto
         ? 'automatisch vorgeschlagen — du kannst es ändern' : 'essenzieller Bereich'}">
@@ -377,15 +465,10 @@ function anlegen(){
 
   <div class="nav">
     <button class="go" ${bereiche.length >= MIN ? '' : 'disabled'} onclick="seite=1;render()">Weiter zum Rad</button>
-    <span class="hint">${(() => {
-      if (bereiche.length < MIN)
-        return `noch ${MIN - bereiche.length} Bereich${MIN-bereiche.length===1?'':'e'}`;
-      const ow = bereiche.filter(b => b.wichtig === null).length;
-      const teile = [];
-      if (ow) teile.push(`${ow}× Wichtigkeit offen`);
-      if (fehlend().length) teile.push(`${fehlend().length} Zuordnung${fehlend().length===1?'':'en'} offen`);
-      return teile.length ? teile.join(' · ') + ' — du kannst trotzdem weiter' : '';
-    })()}</span>
+    <span class="hint">${bereiche.length < MIN
+      ? `noch ${MIN - bereiche.length} Bereich${MIN-bereiche.length===1?'':'e'}`
+      : (fehlend().length ? `${fehlend().length} Zuordnung${fehlend().length===1?'':'en'} offen —
+         du kannst trotzdem weiter` : '')}</span>
   </div>`;
   const f = document.getElementById('neu');
   if (f) f.focus();
@@ -401,15 +484,11 @@ function dazu(name){
   if (!t) return;
   if (bereiche.some(b => b.name.toLowerCase() === t.toLowerCase())) return;
   if (bereiche.length >= MAX) return;
-  bereiche.push({name:t, wert:null, wichtig:null, ess:null});
+  bereiche.push({name:t, wert:null, ess:null});
   autoZuordnen();
   render();
 }
 function weg(i){ bereiche.splice(i,1); autoZuordnen(); render(); }
-function wichtigSetzen(i, v){
-  bereiche[i].wichtig = v === '' ? null : Number(v);
-  render();
-}
 /* Jede essenzielle Rolle kann nur einmal vergeben werden — sonst waere „Beziehungen"
    doppelt abgedeckt und „Gesundheit" gar nicht, ohne dass es auffaellt. */
 function belegt(id, ausser){ return bereiche.some((b,j) => j !== ausser && b.ess === id); }
@@ -473,24 +552,6 @@ function rad(){
       opacity=".85" pointer-events="none"/>`;
   }).join('');
 
-  /* Die Wichtigkeit als Marke auf dem Segment: wo der Bereich stehen muesste, wenn er
-     so voll waere, wie er dir wichtig ist. Die Fuellung ist der Stand, die Marke der
-     Anspruch — der Abstand dazwischen ist die Aussage des ganzen Rades. */
-  const marken = bereiche.map((b,i) => {
-    if (b.wichtig === null) return '';
-    /* Bei Wichtigkeit 10 laege die Marke exakt auf der Aussenkontur und waere nicht
-       mehr als Marke zu erkennen — deshalb ein Pixel nach innen. */
-    const r = Math.min(RI + (R-RI) * b.wichtig/G, R - 1.5);
-    const a0 = -Math.PI/2 + i * 2*Math.PI/n;
-    const a1 = -Math.PI/2 + (i+1) * 2*Math.PI/n;
-    const p = (rad,w) => [M + rad*Math.cos(w), M + rad*Math.sin(w)];
-    const [x0,y0] = p(r,a0), [x1,y1] = p(r,a1);
-    const gross = (a1-a0) > Math.PI ? 1 : 0;
-    return `<path d="M${x0} ${y0} A${r} ${r} 0 ${gross} 1 ${x1} ${y1}" fill="none"
-      stroke="#FFF" stroke-width="2.6" opacity=".92" stroke-linecap="round"
-      pointer-events="none"/>`;
-  }).join('');
-
   const segs = bereiche.map((b,i) => {
     const voll = segment(i, n, R);
     const wert = b.wert === null ? 0 : b.wert;
@@ -545,8 +606,8 @@ function rad(){
 
   const offen = bereiche.filter(b => b.wert === null).length;
   app.innerHTML = `
-  <h2>Schritt 2 von 3</h2>
-  <h1>Und wie voll ist jeder Bereich wirklich?</h1>
+  <h2>Schritt 2 von 5</h2>
+  <h1>Wie voll ist jeder Bereich?</h1>
   <p>Zieh vom Mittelpunkt nach außen, bis das Stück so voll ist, wie der Bereich
   gerade läuft. <b>Null heißt: läuft extrem schlecht. Zehn heißt: perfekt, kein
   Verbesserungsbedarf.</b> Halbe Schritte sind möglich. Nimm dir Zeit dafür — das Nachdenken ist der Punkt,
@@ -556,27 +617,19 @@ function rad(){
     <svg viewBox="${vb}" id="svg">
       ${ringe.join('')}
       ${segs}
-      ${marken}
       ${kontur}
       <circle cx="${M}" cy="${M}" r="${RI}" fill="var(--bg)" stroke="var(--line)"/>
       ${labels}
     </svg>
   </div>
 
-  ${bereiche.some(b => b.wichtig !== null) ? `<p class="hint" style="text-align:center;
-    margin-top:-2px">Die helle Linie ist deine Wichtigkeit — so voll müsste der Bereich
-    sein, damit er dir gerecht wird.</p>` : ''}
   ${(typeof vorher === 'function' && vorher()) ? `<p class="hint" style="text-align:center;
     margin-top:-2px">Die gestrichelte Linie ist dein Rad vom ${esc(vorher().datum)}.</p>` : ''}
 
-  <div class="werte">${bereiche.map(b => {
-    const l = luecke(b);
-    return `<div class="wert${b.wert === null ? ' leer' : ''}">
+  <div class="werte">${bereiche.map(b => `
+    <div class="wert${b.wert === null ? ' leer' : ''}">
       <span class="z">${b.wert === null ? '–' : zahl(b.wert)}</span>
-      <span class="b">${esc(b.name)}</span>
-      ${l !== null && l > 0 ? `<span class="lk" title="Abstand zu deiner Wichtigkeit ${
-        b.wichtig}">−${zahl(l)}</span>` : ''}</div>`;
-  }).join('')}
+      <span class="b">${esc(b.name)}</span></div>`).join('')}
   </div>
 
   <div class="nav">
@@ -691,18 +744,6 @@ function empfehlungHtml(){
       ${esc(roher.name)} (${zahl1(wertVon(roher))}) — aber er deckt <b>${esc(ess)}</b> ab,
       einen der drei essenziellen Bereiche, und der andere nicht. Bei diesem Abstand geht
       der essenzielle vor.`;
-  /* 🔴 Hier stand einmal „kein anderer Bereich hat diesen Abstand" — eine Behauptung,
-     die nirgends geprueft wurde und in der Haelfte der Faelle falsch war. Es wird nur
-     noch gesagt, was nachgerechnet ist: die eigene Luecke, und ob sie die groesste ist. */
-  const lk = luecke(b);
-  if (lk !== null && lk > 0){
-    const alle = bereiche.map(luecke).filter(x => x !== null);
-    const groesste = alle.length > 1 && lk >= Math.max(...alle);
-    grund += ` Wichtig ist er dir mit <b>${b.wichtig}</b> — das sind
-      <b>${zahl(lk)} Punkte</b> Abstand zwischen dem, was dir der Bereich wert ist,
-      und dem, was er dir gerade gibt.${groesste
-        ? ' Das ist der größte Abstand in deinem ganzen Rad.' : ''}`;
-  }
   if (st !== null && su.h > su.s) grund += ` Er ist der einzige, in dem die Lücken
     schwerer wiegen als die Stärken (${su.h} gegen ${su.s} Punkte).`;
 
@@ -742,7 +783,7 @@ function fertig(){
   const radHtml = app.innerHTML.split('<div class="radbox">')[1].split('</div>')[0];
   const zahlZiele = zielListe().length;
   app.innerHTML = `
-  <h2>Dein Rad</h2>
+  <h2>Schritt 4 von 5 · Dein Rad</h2>
   <h1>${rund ? 'Ein rundes Rad.' : 'Ein unrundes Rad.'}</h1>
   <p>${rund
     ? `Zwischen dem stärksten und dem schwächsten Bereich liegen nur
@@ -762,6 +803,9 @@ function fertig(){
   ${kriseHtml()}
 
   ${empfehlungHtml()}
+
+  <details class="auf"><summary>Deine Bereiche auf den zehn Intelligenzen</summary>
+    ${achsenHtml()}</details>
 
   <details class="auf"><summary>Gefühl und Rechnung je Bereich</summary>
     ${gegenHtml()}</details>
@@ -803,18 +847,7 @@ function fertig(){
 const ESS_BONUS = 1.5;
 
 function wertVon(b){ const st = standort(b); return st !== null ? st : b.wert; }
-/* Die Wichtigkeit zieht in dieselbe Richtung wie der Bonus fuer essenzielle Bereiche
-   und in derselben Groessenordnung: ein Bereich mit Wichtigkeit 10 rueckt um 1,6
-   Punkte nach vorn, einer mit 1 um 1,6 nach hinten. Wer keine Wichtigkeit gesetzt hat,
-   wird behandelt wie bisher — der Test bleibt ohne diese Angabe vollstaendig. */
-const WICHT_MITTE = 5.5, WICHT_FAKTOR = 0.35;
-function wichtBonus(b){ return b.wichtig === null ? 0 : (b.wichtig - WICHT_MITTE) * WICHT_FAKTOR; }
-function prioWert(b){ return wertVon(b) - (b.ess ? ESS_BONUS : 0) - wichtBonus(b); }
-/* Der Abstand zwischen Anspruch und Stand. Das ist die Zahl, die der Nutzer sucht. */
-function luecke(b){
-  if (b.wichtig === null || b.wert === null) return null;
-  return Math.round((b.wichtig - wertVon(b)) * 2) / 2;
-}
+function prioWert(b){ return wertVon(b) - (b.ess ? ESS_BONUS : 0); }
 
 /* Die Reihenfolge liegt in b.rang, NICHT in der Reihenfolge von `bereiche` — die
    bestimmt die Segmente im Rad und darf sich nicht verschieben. */
@@ -916,7 +949,7 @@ function abschluss(){
   const gewaehlt = alle.filter(x => x.vor).length;
 
   app.innerHTML = `
-  <h2>Schritt 4 von 4 · Abschluss</h2>
+  <h2>Schritt 5 von 5 · Abschluss</h2>
   <h1>Womit fängst du an?</h1>
   <p>Bring deine Bereiche in die Reihenfolge, in der du sie dieses Jahr angehst.
   Danach sagt dir die Methode, ob die Reihenfolge trägt.</p>
@@ -937,9 +970,7 @@ function abschluss(){
   </div>
   <div class="nav" style="margin-top:10px">
     <button class="ghost" onclick="rangVorschlag()">Vorschlag der Methode übernehmen</button>
-    <span class="hint">größte Lücke zuerst · essenzielle mit ${zahl1(ESS_BONUS)} Punkten
-      Vorsprung${bereiche.some(b => b.wichtig !== null)
-        ? ' · Wichtigkeit zählt mit' : ''}</span>
+    <span class="hint">schwächster zuerst · essenzielle mit ${zahl1(ESS_BONUS)} Punkten Vorsprung</span>
   </div>
 
   <h3 style="margin-top:34px">Was die Methode dazu sagt</h3>
@@ -948,8 +979,8 @@ function abschluss(){
     : x.art === 'rot'
       ? `<div class="warn">${x.t}</div>`
       : `<p>${x.t}</p>`).join('')}
-  <p class="hint">Das sind feste Regeln aus der Methode, kein Modell — die Datei läuft
-  offline und schickt nichts weg. Die Entscheidung bleibt deine.</p>
+  <p class="hint">Das sind feste Regeln aus der Methode, kein Modell — sie werden hier
+  im Browser gerechnet, nicht auf einem Server. Die Entscheidung bleibt deine.</p>
 
   <h3 style="margin-top:34px">Das nehme ich mir vor</h3>
   <p>Aus ${alle.length} Ansätzen: kreuz <b>drei bis fünf</b> an. Nicht mehr — mehr als
@@ -962,6 +993,29 @@ function abschluss(){
       <span class="q">${esc(x.bereich)} · ${esc(x.was)}</span>
       <span class="g">${x.g}</span>
     </label>`).join('')}
+  </div>
+
+  <h3 style="margin-top:34px">Rad und Vorsätze per Mail</h3>
+  <div class="mailk" id="mailkarte">
+    <p>Wenn du dein Rad behalten willst, schicken wir es dir zu. Erst dann verlassen
+    Daten diesen Browser — vorher liegt alles nur bei dir.</p>
+    <p class="hint" style="margin:0 0 14px">Übertragen werden deine <b>Zahlen</b>: der Wert
+    je Bereich, die Namen, die du den Bereichen gegeben hast, und die Vorsätze, die du
+    oben angekreuzt hast. <b>Nicht</b> übertragen wird, was du geschrieben hast —
+    Vision, Stärken, Herausforderungen und Notizen bleiben in deinem Browser.
+    Die Mail geht an dich, eine Kopie an Frank Linke; er liest sie selbst.
+    Wenn du das nicht willst, sichere dir den Durchgang und die Vorsätze als Datei —
+    die Knöpfe darunter tun genau das, ohne dass irgendetwas gesendet wird.</p>
+    <input id="lw-name" type="text" placeholder="Dein Name" autocomplete="name">
+    <input id="lw-mail" type="email" placeholder="deine@adresse.de" autocomplete="email">
+    <p class="hp"><input id="lw-web" type="text" tabindex="-1" autocomplete="off"></p>
+    <button class="go" onclick="radSenden()">Rad zuschicken</button>
+    <p class="hint" id="lw-status"></p>
+    <p class="hint">Gespeichert wird auf einem eigenen Server in Deutschland, in einem
+    Verzeichnis, das über das Internet nicht abrufbar ist. Keine Weitergabe an Dritte,
+    Löschung spätestens nach 24 Monaten.
+    <a href="https://yourmastermind.de/datenschutzerklarung/" target="_blank"
+      rel="noreferrer noopener" style="color:var(--gold)">Datenschutz</a></p>
   </div>
 
   <div class="nav">
@@ -1207,7 +1261,7 @@ function vertiefung(){
   app.innerHTML = `
   ${fortHtml()}
   ${sprungHtml(b)}
-  <h2>Schritt 3 von 3 · Bereich ${vtIndex+1} von ${bereiche.length}</h2>
+  <h2>Schritt 3 von 5 · Bereich ${vtIndex+1} von ${bereiche.length}</h2>
   <h1>${esc(b.name)}</h1>
   <p>Aus dem Bauch hast du <b>${zahl(b.wert)}</b> gemalt. Diese Zahl misst gegen einen
   Maßstab, den bisher nur du kennst — und den du selbst noch nicht aufgeschrieben hast.
@@ -1476,7 +1530,6 @@ function entwurfLaden(){
     const e = JSON.parse(roh);
     if (!e || !Array.isArray(e.bereiche) || !e.bereiche.length) return false;
     bereiche = e.bereiche;
-    intro = false;                     // ein laufender Durchgang faengt nicht neu an
     seite = Math.min(4, Math.max(0, e.seite | 0));
     vtIndex = Math.min(bereiche.length - 1, Math.max(0, e.vtIndex | 0));
     fortgesetzt = e.datum || null;
@@ -1487,7 +1540,7 @@ function entwurfLaden(){
 function entwurfWeg(){
   if (!confirm('Diesen Durchgang verwerfen und neu anfangen?')) return;
   try { localStorage.removeItem(ENTWURF); } catch(e){}
-  bereiche = []; seite = 0; vtIndex = 0; fortgesetzt = null; intro = true; render();
+  bereiche = []; seite = 0; vtIndex = 0; fortgesetzt = null; render();
 }
 /* 🔴 Der Entwurf lag bisher NUR im localStorage — nicht rettbar, nicht weiterreichbar,
    nicht lesbar ausser im selben Browser. Bei einem Durchgang, der eine Sitzung dauert,
@@ -1777,14 +1830,143 @@ function kriseHtml(){
   return h;
 }
 
+/* ====================== Melden und Senden ======================
+   Das Lebensrad hat bisher nichts uebertragen. Zwei Dinge aendern das, beide bewusst
+   getrennt:
+   1. Eine ANONYME Verlaufsmeldung je Schritt — kein Name, keine Mail, keine Texte.
+      Die Sitzungskennung lebt nur im Arbeitsspeicher dieses Tabs, nicht im
+      localStorage und nicht in einem Cookie; beim Neuladen faengt eine neue an.
+      Damit ist messbar, an welchem Schritt Leute aufhoeren, ohne Personenbezug.
+   2. Das ERGEBNIS, nur auf ausdruecklichen Wunsch und nur gegen eine Mailadresse.
+   🔴 Beides geht an denselben Endpunkt wie alle anderen Tests. Vier Tests mit vier
+   Ablagen waeren genau die Zersplitterung, die das Mastermind Profile beenden soll. */
+const ENDPUNKT = 'https://yourmastermind.de/tests/speichern.php';
+const TEST = 'life-wheel';
+/* Fassung des Satzaufbaus. lw-1 schickte die Achsen auf 0–10 wie die Anzeige, lw-2 auf
+   0–100 wie der Habit Score. Ohne diese Kennung waeren alte und neue Saetze in
+   life-wheel.jsonl nicht auseinanderzuhalten. */
+const STAND = 'lw-2';
+const SCHRITTE = 5;
+const SITZUNG = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+let zuletztGemeldet = null;
+
+function melde(ereignis, nr){
+  try {
+    fetch(ENDPUNKT, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      keepalive: true,
+      body: JSON.stringify({test: TEST, ereignis: ereignis, seite: nr,
+        von: SCHRITTE, sitzung: SITZUNG})
+    }).catch(() => {});
+  } catch(e){}
+}
+/* Ein Text, den man behalten kann — derselbe, der per Mail rausgeht. */
+function radText(){
+  const d = new Date().toLocaleDateString('de-DE');
+  const z = ['LEBENSRAD — ' + d, ''];
+  raenge().forEach((b,i) => {
+    const st = standort(b);
+    z.push(`${i+1}. ${b.name}: ${zahl1(wertVon(b))} von 10`
+      + (b.ess ? '   (essenziell)' : '')
+      + (st !== null && Math.abs(st - b.wert) >= 1 ? `   [Bauchwert ${zahl1(b.wert)}]` : ''));
+  });
+  const s = schwaechster();
+  if (s) z.push('', 'Schwaechster Bereich: ' + s.name + ' (' + zahl1(wertVon(s)) + ')');
+  const ax = achsenWerte();
+  if (Object.keys(ax).length){
+    z.push('', 'AUF DEN ZEHN INTELLIGENZEN');
+    ACHSEN.forEach(a => { if (ax[a.name] !== undefined)
+      z.push('  ' + a.name + ': ' + zahl1(ax[a.name]) + ' von 10'); });
+  }
+  const vor = zielListe().filter(x => x.vor);
+  if (vor.length){
+    z.push('', 'DAS NEHME ICH MIR VOR');
+    vor.forEach(x => {
+      z.push(`[${x.g}] ${x.schritt}`);
+      z.push(`      ${x.bereich} · ${x.was}`);
+      if (x.ziel) z.push(`      geloest: ${x.ziel}`);
+    });
+  }
+  return z.join('\n');
+}
+async function radSenden(){
+  const st = document.getElementById('lw-status');
+  const name = (document.getElementById('lw-name').value || '').trim();
+  const mail = (document.getElementById('lw-mail').value || '').trim();
+  if (name.length < 2){ st.textContent = 'Bitte trag deinen Namen ein.'; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(mail)){
+    st.textContent = 'Die Adresse sieht nicht richtig aus.'; return; }
+  st.textContent = 'Wird gesendet …';
+  const werte = {};
+  bereiche.forEach(b => { werte[b.name] = wertVon(b); });
+  const alle = Object.values(werte);
+  try {
+    const res = await fetch(ENDPUNKT, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        test: TEST, name: name, mail: mail,
+        web: document.getElementById('lw-web').value,   // Honigtopf
+        stand: STAND,                 // ab lw-2 stehen die Achsen auf 0–100
+        achsen: achsenWerte(100),     // die gemeinsame Achse des Mastermind Profile
+        gesamt: alle.length ? Math.round(alle.reduce((a,b) => a+b, 0) / alle.length * 10) / 10 : null,
+        kennzahlen: {
+          spanne: Math.round((Math.max(...alle) - Math.min(...alle)) * 10) / 10,
+          schwaechster: (schwaechster() || {}).name || null,
+          vorsaetze: zielListe().filter(x => x.vor).length
+        },
+        dimensionen: werte,
+        /* 🔴 Frank am 04.09.2026: „nein, sie muessen mir nichts schicken, so lassen."
+           Im Lebensrad stehen Beziehungs-, Geld- und Gesundheitsthemen im Klartext.
+           Uebertragen werden deshalb ausschliesslich ZAHLEN und die selbst gewaehlten
+           Bereichsnamen — keine Vision, keine Herausforderungen, keine Notizen. */
+        antworten: bereiche.map(b => ({name: b.name, ess: b.ess || null, wert: b.wert,
+          standort: standort(b)})),
+        text: radText()
+      })
+    });
+    const d = await res.json();
+    if (d && d.ok){
+      melde('gesendet', 5);
+      document.getElementById('mailkarte').innerHTML =
+        '<p>🟢 Erledigt — dein Rad ist unterwegs an <b>' + esc(mail) + '</b>.</p>'
+        + '<p class="hint">Schau notfalls im Spam-Ordner nach.</p>';
+    } else {
+      st.textContent = 'Das hat nicht geklappt: ' + ((d && d.fehler) || 'unbekannter Fehler')
+        + ' — sichere dir unten den Durchgang, dann geht nichts verloren.';
+    }
+  } catch(e){
+    st.textContent = 'Keine Verbindung. Sichere dir unten den Durchgang, dann geht nichts verloren.';
+  }
+}
+
+/* 🔴 Seit dem 10.09.2026 sendet das Lebensrad Daten. Damit braucht es Impressum und
+   Datenschutzhinweis erreichbar von jeder Seite — nicht nur in der Sendekarte, die
+   viele nie sehen. Beides liegt auf yourmastermind.de, hier wird verlinkt statt
+   dupliziert: zwei Fassungen desselben Rechtstexts laufen sonst auseinander. */
+function fussHtml(){
+  return `<footer style="margin:64px 0 0;padding:18px 0 0;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--dim);display:flex;gap:18px;flex-wrap:wrap">
+    <span>IF YOU CHANGE · Frank Linke</span>
+    <a href="https://yourmastermind.de/impressum/" target="_blank" rel="noreferrer noopener"
+      style="color:var(--dim)">Impressum</a>
+    <a href="https://yourmastermind.de/datenschutzerklarung/" target="_blank"
+      rel="noreferrer noopener" style="color:var(--dim)">Datenschutz</a>
+  </footer>`;
+}
+
 function render(){
   entwurfMerken();                   // zentral statt in jedem Aenderungspfad einzeln
-  if (intro) return introSeite();
+  if (seite !== zuletztGemeldet){
+    melde(zuletztGemeldet === null && seite === 0 ? 'start'
+      : (seite === 4 ? 'ende' : 'seite'), seite + 1);
+    zuletztGemeldet = seite;
+  }
   if (seite === 0) anlegen();
   else if (seite === 1) rad();
   else if (seite === 2) vertiefung();
   else if (seite === 3) fertig();
   else abschluss();
+  app.insertAdjacentHTML('beforeend', fussHtml());
 }
 entwurfLaden();
 render();
