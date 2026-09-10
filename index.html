@@ -1109,6 +1109,10 @@ function abschluss(){
     <input id="lw-name" type="text" placeholder="Dein Name" autocomplete="name">
     <input id="lw-mail" type="email" placeholder="deine@adresse.de" autocomplete="email">
     <p class="hp"><input id="lw-web" type="text" tabindex="-1" autocomplete="off"></p>
+    <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin:10px 0">
+      <input id="lw-erinnerung" type="checkbox" style="margin-top:4px">
+      <span>Erinnere mich in zwölf Wochen daran, das Rad neu zu bauen. Ein einzelner
+        Stand sagt wenig, die Bewegung sagt alles.</span></label>
     <button class="go" onclick="radSenden()">Rad zuschicken</button>
     <p class="hint" id="lw-status"></p>
     <p class="hint">Gespeichert wird auf einem eigenen Server in Deutschland, in einem
@@ -2008,6 +2012,9 @@ async function radSenden(){
         test: TEST, name: name, mail: mail,
         web: document.getElementById('lw-web').value,   // Honigtopf
         stand: STAND,                 // ab lw-2 stehen die Achsen auf 0–100
+        /* Opt-in: ohne Haken schickt der Erinnerungslauf nichts. Die Adresse wurde fuer
+           ein Ergebnis gegeben, nicht fuer wiederkehrende Post. */
+        erinnerung: (document.getElementById('lw-erinnerung') || {}).checked === true,
         achsen: achsenWerte(100),     // die gemeinsame Achse des Mastermind Profile
         gesamt: alle.length ? Math.round(alle.reduce((a,b) => a+b, 0) / alle.length * 10) / 10 : null,
         kennzahlen: {
