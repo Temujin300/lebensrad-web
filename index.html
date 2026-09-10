@@ -239,6 +239,128 @@ const ESSENZIELL = [
    kern:['gesund','fitness','körper','koerper','figur','aussehen'],
    auch:['sport','ernährung','ernaehrung','schlaf']}];
 
+/* ====================== Die zehn Intelligenzen ======================
+   🔴 Franks Entscheidung vom 10.09.2026 (Weg 1): die zehn Buecher sind die gemeinsame
+   Messachse des Mastermind Profile. Die Achse gilt nur fuer Life Wheel und Habit Score
+   — beide sind bereichsfoermig. Freedom Score und Personality Score gehoeren
+   ausdruecklich NICHT darauf, das sind andere Messarten.
+
+   Ein Lebensrad-Bereich ist breiter als eine Achse: „Gesundheit" enthaelt Koerper
+   (Fitness) UND Erholung (Energie). Deshalb ist die Zuordnung ein VORSCHLAG, den der
+   Nutzer auf der Ergebnisseite aendern kann — nicht ein weiteres Pflichtfeld vorne.
+   Die Reihenfolge ist die der Achsentabelle. `kern` zaehlt doppelt, `auch` einfach,
+   dasselbe Verfahren wie bei autoZuordnen() und den Unterkriterien. */
+const ACHSEN = [
+  {id:'core',  name:'Inner Core',
+   kern:['selbstwert','selbstvertrauen','identit','selbstbild','selbstannahme'],
+   auch:['ich selbst','innere','fundament','authentiz']},
+  {id:'change', name:'Inner Change',
+   kern:['entwicklung','wachstum','veraenderung','veränderung','persoenlich','persönlich'],
+   auch:['lernen','selbst','fortschritt','komfortzone','mindset']},
+  {id:'leben', name:'Lebensintelligenz',
+   kern:['krise','resilienz','rueckschlag','rückschlag','schicksal'],
+   auch:['akzeptanz','loslassen','vergaeng','vergäng']},
+  {id:'energie', name:'Energieintelligenz',
+   kern:['energie','schlaf','erholung','regeneration','entspannung','stress'],
+   auch:['freizeit','ausgleich','musse','muße','ruhe','balance','erholungswert']},
+  {id:'fitness', name:'Fitnessintelligenz',
+   kern:['gesundheit','fitness','koerper','körper','ernaehrung','ernährung','figur'],
+   auch:['sport','training','aussehen','gewicht','kraft','ausdauer']},
+  {id:'planung', name:'Planungsintelligenz',
+   kern:['ziel','planung','vision','sinn','werte','spirit','glaube','religio'],
+   auch:['richtung','prioritaet','priorität','zukunft','seele','achtsamkeit','berufung']},
+  {id:'time', name:'Time Transformation',
+   /* 🔴 NICHT einfach „zeit": das steckt in „Freizeit" und „Arbeitszeit" und zog beide
+      hierher. Time Transformation misst den Schutz der Zeit, nicht ihre Verwendung. */
+   kern:['zeitmanagement','zeiteinteilung','meine zeit','fokus','ablenkung','konzentration'],
+   auch:['flow','termine','kalender','effizienz','produktiv']},
+  {id:'umsetzung', name:'Umsetzungsintelligenz',
+   kern:['beruf','karriere','arbeit','job','unternehm','business','firma','geschaeft',
+         'geschäft','umsetzung'],
+   auch:['disziplin','gewohnheit','dranbleiben','wirksamkeit','leistung','projekt']},
+  {id:'social', name:'Social Value',
+   kern:['beziehung','liebe','partner','ehe','familie','freunde','sozial','kontakt'],
+   auch:['netzwerk','umfeld','gemeinschaft','beitrag','ehrenamt','engagement',
+         'zurueckgeben','zurückgeben','kinder','eltern']},
+  {id:'finanz', name:'Finanzielle Intelligenz',
+   kern:['finanz','geld','vermoegen','vermögen','einkommen','wohlstand'],
+   auch:['sparen','investment','rendite','schulden','absicherung']},
+];
+
+/* Schlaegt je Bereich eine Achse vor. 🔴 Ein von Hand gesetzter Wert wird nie
+   ueberschrieben — dieselbe Regel wie bei den essenziellen Bereichen, sonst kippt die
+   Auswahl beim naechsten Neuzeichnen zurueck. */
+function achsenVorschlagen(){
+  bereiche.forEach(b => {
+    if (b.achse && !b.achseAuto) return;         // Entscheidung des Nutzers
+    const n = b.name.toLowerCase();
+    let best = null, bp = 0;
+    /* 🔴 Gezaehlt wird die LAENGE der Treffer, nicht ihre Anzahl. „Gesundheit und
+       Energie" — der Standardvorschlag des Lebensrads — landete sonst bei Energie,
+       weil beide genau einen Treffer haben; „gesundheit" ist aber das speziellere
+       Wort. Dieselbe Regel wie bei den Unterkriterien: bei Gleichstand gewinnt das
+       laengste Suchwort. Kernwoerter zaehlen doppelt. */
+    const punkte = (woerter, gewicht) => woerter
+      .filter(w => n.includes(w))
+      .reduce((summe, w) => summe + w.length * gewicht, 0);
+    ACHSEN.forEach(a => {
+      const p = punkte(a.kern, 2) + punkte(a.auch, 1);
+      if (p > bp){ best = a; bp = p; }
+    });
+    b.achse = best ? best.id : null;
+    b.achseAuto = true;
+  });
+}
+/* Werte je Achse fuer den Sendesatz — volle Bandnamen, so verlangt es der Satzaufbau
+   („Energieintelligenz", nicht „Energie"). Mehrere Bereiche auf derselben Achse werden
+   gemittelt; Bereiche ohne Zuordnung fallen raus statt als 0 zu zaehlen. */
+function achsenWerte(){
+  const topf = {};
+  bereiche.forEach(b => {
+    if (!b.achse) return;
+    const a = ACHSEN.find(x => x.id === b.achse);
+    if (!a) return;
+    (topf[a.name] = topf[a.name] || []).push(wertVon(b));
+  });
+  const aus = {};
+  ACHSEN.forEach(a => {
+    const w = topf[a.name];
+    if (w && w.length) aus[a.name] = Math.round(w.reduce((x,y) => x+y, 0) / w.length * 10) / 10;
+  });
+  return aus;
+}
+function achseSetzen(i, id){
+  bereiche[i].achse = id || null;
+  bereiche[i].achseAuto = false;                 // ab jetzt Entscheidung, kein Vorschlag
+  render(); entwurfMerken();
+}
+/* Die Einordnung steht auf der Ergebnisseite, aufklappbar. Dort hat sie einen Nutzen
+   („so haengt dein Rad mit den zehn Buechern zusammen"), vorne waere sie eine Huerde. */
+function achsenHtml(){
+  achsenVorschlagen();
+  const w = achsenWerte();
+  const offen = bereiche.filter(b => !b.achse);
+  return `<p>Deine Bereiche hast du selbst benannt. Damit sich dein Rad mit den anderen
+    Tests vergleichen laesst, ordnen wir jeden einer der zehn Intelligenzen zu — als
+    Vorschlag. ${offen.length ? `<b>${offen.length}</b> ${offen.length === 1
+      ? 'Bereich passt zu keiner' : 'Bereiche passen zu keiner'} — sag uns, wohin.`
+      : 'Aendere, was nicht passt.'}</p>
+    <div class="liste">${bereiche.map((b,i) => `
+      <div class="zeile"><span class="t">${esc(b.name)}</span>
+      <span class="w">${zahl1(wertVon(b))}</span>
+      <select onchange="achseSetzen(${i}, this.value)"
+        aria-label="Intelligenz fuer ${esc(b.name)}"
+        class="${b.achseAuto && b.achse ? 'auto' : ''}">
+        <option value=""${b.achse ? '' : ' selected'}>— nicht zugeordnet</option>
+        ${ACHSEN.map(a => `<option value="${a.id}"${b.achse === a.id ? ' selected' : ''}
+          >${a.name}</option>`).join('')}
+      </select></div>`).join('')}
+    </div>
+    <p class="hint">Mehrere Bereiche auf derselben Intelligenz werden gemittelt.
+    ${Object.keys(w).length} von 10 Intelligenzen sind durch dein Rad abgedeckt — die
+    uebrigen fuellen die anderen Tests.</p>`;
+}
+
 /* Ordnet die drei essenziellen Bereiche selbst zu: je essenziellem Bereich gewinnt der
    Bereich mit den meisten Treffern, bei Gleichstand das laengste Suchwort — dasselbe
    Verfahren wie bei den Unterkriterien.
@@ -676,6 +798,9 @@ function fertig(){
   ${kriseHtml()}
 
   ${empfehlungHtml()}
+
+  <details class="auf"><summary>Deine Bereiche auf den zehn Intelligenzen</summary>
+    ${achsenHtml()}</details>
 
   <details class="auf"><summary>Gefühl und Rechnung je Bereich</summary>
     ${gegenHtml()}</details>
@@ -1738,6 +1863,12 @@ function radText(){
   });
   const s = schwaechster();
   if (s) z.push('', 'Schwaechster Bereich: ' + s.name + ' (' + zahl1(wertVon(s)) + ')');
+  const ax = achsenWerte();
+  if (Object.keys(ax).length){
+    z.push('', 'AUF DEN ZEHN INTELLIGENZEN');
+    ACHSEN.forEach(a => { if (ax[a.name] !== undefined)
+      z.push('  ' + a.name + ': ' + zahl1(ax[a.name]) + ' von 10'); });
+  }
   const vor = zielListe().filter(x => x.vor);
   if (vor.length){
     z.push('', 'DAS NEHME ICH MIR VOR');
@@ -1766,6 +1897,7 @@ async function radSenden(){
       body: JSON.stringify({
         test: TEST, name: name, mail: mail,
         web: document.getElementById('lw-web').value,   // Honigtopf
+        achsen: achsenWerte(),        // die gemeinsame Achse des Mastermind Profile
         gesamt: alle.length ? Math.round(alle.reduce((a,b) => a+b, 0) / alle.length * 10) / 10 : null,
         kennzahlen: {
           spanne: Math.round((Math.max(...alle) - Math.min(...alle)) * 10) / 10,
@@ -1797,6 +1929,21 @@ async function radSenden(){
   }
 }
 
+/* 🔴 Seit dem 10.09.2026 sendet das Lebensrad Daten. Damit braucht es Impressum und
+   Datenschutzhinweis erreichbar von jeder Seite — nicht nur in der Sendekarte, die
+   viele nie sehen. Beides liegt auf yourmastermind.de, hier wird verlinkt statt
+   dupliziert: zwei Fassungen desselben Rechtstexts laufen sonst auseinander. */
+function fussHtml(){
+  return `<footer style="margin:64px 0 0;padding:18px 0 0;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--dim);display:flex;gap:18px;flex-wrap:wrap">
+    <span>IF YOU CHANGE · Frank Linke</span>
+    <a href="https://yourmastermind.de/impressum/" target="_blank" rel="noreferrer noopener"
+      style="color:var(--dim)">Impressum</a>
+    <a href="https://yourmastermind.de/datenschutzerklarung/" target="_blank"
+      rel="noreferrer noopener" style="color:var(--dim)">Datenschutz</a>
+  </footer>`;
+}
+
 function render(){
   entwurfMerken();                   // zentral statt in jedem Aenderungspfad einzeln
   if (seite !== zuletztGemeldet){
@@ -1809,6 +1956,7 @@ function render(){
   else if (seite === 2) vertiefung();
   else if (seite === 3) fertig();
   else abschluss();
+  app.insertAdjacentHTML('beforeend', fussHtml());
 }
 entwurfLaden();
 render();
