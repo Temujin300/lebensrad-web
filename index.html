@@ -314,7 +314,12 @@ function achsenVorschlagen(){
 /* Werte je Achse fuer den Sendesatz — volle Bandnamen, so verlangt es der Satzaufbau
    („Energieintelligenz", nicht „Energie"). Mehrere Bereiche auf derselben Achse werden
    gemittelt; Bereiche ohne Zuordnung fallen raus statt als 0 zu zaehlen. */
-function achsenWerte(){
+function achsenWerte(skala){
+  /* 🔴 skala=100 fuer den Sendesatz. Das Feld `achsen` ist das EINZIGE, ueber das sich
+     die Tests des Mastermind Profile spaeter verrechnen lassen — Habit Score liefert
+     dort 0–100. Das Lebensrad rechnet intern auf 0–10, deshalb wird beim Senden
+     umskaliert; die Anzeige bleibt in der Sprache des Tests. */
+  const f = (skala === 100) ? 10 : 1;
   const topf = {};
   bereiche.forEach(b => {
     if (!b.achse) return;
@@ -325,7 +330,7 @@ function achsenWerte(){
   const aus = {};
   ACHSEN.forEach(a => {
     const w = topf[a.name];
-    if (w && w.length) aus[a.name] = Math.round(w.reduce((x,y) => x+y, 0) / w.length * 10) / 10;
+    if (w && w.length) aus[a.name] = Math.round(w.reduce((x,y) => x+y, 0) / w.length * f * 10) / 10;
   });
   return aus;
 }
@@ -1837,6 +1842,10 @@ function kriseHtml(){
    Ablagen waeren genau die Zersplitterung, die das Mastermind Profile beenden soll. */
 const ENDPUNKT = 'https://yourmastermind.de/tests/speichern.php';
 const TEST = 'life-wheel';
+/* Fassung des Satzaufbaus. lw-1 schickte die Achsen auf 0–10 wie die Anzeige, lw-2 auf
+   0–100 wie der Habit Score. Ohne diese Kennung waeren alte und neue Saetze in
+   life-wheel.jsonl nicht auseinanderzuhalten. */
+const STAND = 'lw-2';
 const SCHRITTE = 5;
 const SITZUNG = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
 let zuletztGemeldet = null;
@@ -1897,7 +1906,8 @@ async function radSenden(){
       body: JSON.stringify({
         test: TEST, name: name, mail: mail,
         web: document.getElementById('lw-web').value,   // Honigtopf
-        achsen: achsenWerte(),        // die gemeinsame Achse des Mastermind Profile
+        stand: STAND,                 // ab lw-2 stehen die Achsen auf 0–100
+        achsen: achsenWerte(100),     // die gemeinsame Achse des Mastermind Profile
         gesamt: alle.length ? Math.round(alle.reduce((a,b) => a+b, 0) / alle.length * 10) / 10 : null,
         kennzahlen: {
           spanne: Math.round((Math.max(...alle) - Math.min(...alle)) * 10) / 10,
