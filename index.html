@@ -34,9 +34,11 @@ button.go{background:var(--gold);color:#1A1A1A;font-weight:800}
 button.go:disabled{background:var(--goldd);color:#00000066;cursor:default}
 button.ghost{background:none;border-color:var(--line);color:var(--dim)}
 button:focus-visible{outline:2px solid var(--goldl);outline-offset:2px}
-input[type=text]{background:#111;border:1px solid var(--line);color:var(--fg);
+input[type=text],input[type=email]{background:#111;border:1px solid var(--line);color:var(--fg);
 border-radius:6px;padding:13px;font-size:16px;font-family:inherit;width:100%}
-input[type=text]:focus-visible{outline:2px solid var(--goldl);outline-offset:1px}
+input[type=text]:focus-visible,input[type=email]:focus-visible{outline:2px solid var(--goldl);outline-offset:1px}
+.hp{position:absolute;left:-9999px;height:0;overflow:hidden}
+.mailk input{width:100%;max-width:360px;display:block;margin:0 0 10px}
 .nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:22px}
 .hint{font-size:12.5px;color:var(--dim)}
 
@@ -278,7 +280,7 @@ let zeigeVorschlaege = false;
 /* ============================ Seite 1: Bereiche ============================ */
 function anlegen(){
   app.innerHTML = `
-  <h2>Schritt 1 von 3</h2>
+  <h2>Schritt 1 von 5</h2>
   <h1>Welche Bereiche hat dein Leben?</h1>
   <p>Schreib sie so auf, wie <b>du</b> sie nennst — nicht wie sie in einem Buch heißen.
   Vier bis acht Stück. Wenn dir „Liebe“ näher ist als „Partnerschaft“, dann schreib Liebe.</p>
@@ -477,7 +479,7 @@ function rad(){
 
   const offen = bereiche.filter(b => b.wert === null).length;
   app.innerHTML = `
-  <h2>Schritt 2 von 3</h2>
+  <h2>Schritt 2 von 5</h2>
   <h1>Wie voll ist jeder Bereich?</h1>
   <p>Zieh vom Mittelpunkt nach außen, bis das Stück so voll ist, wie der Bereich
   gerade läuft. <b>Null heißt: läuft extrem schlecht. Zehn heißt: perfekt, kein
@@ -654,7 +656,7 @@ function fertig(){
   const radHtml = app.innerHTML.split('<div class="radbox">')[1].split('</div>')[0];
   const zahlZiele = zielListe().length;
   app.innerHTML = `
-  <h2>Dein Rad</h2>
+  <h2>Schritt 4 von 5 · Dein Rad</h2>
   <h1>${rund ? 'Ein rundes Rad.' : 'Ein unrundes Rad.'}</h1>
   <p>${rund
     ? `Zwischen dem stärksten und dem schwächsten Bereich liegen nur
@@ -817,7 +819,7 @@ function abschluss(){
   const gewaehlt = alle.filter(x => x.vor).length;
 
   app.innerHTML = `
-  <h2>Schritt 4 von 4 · Abschluss</h2>
+  <h2>Schritt 5 von 5 · Abschluss</h2>
   <h1>Womit fängst du an?</h1>
   <p>Bring deine Bereiche in die Reihenfolge, in der du sie dieses Jahr angehst.
   Danach sagt dir die Methode, ob die Reihenfolge trägt.</p>
@@ -847,8 +849,8 @@ function abschluss(){
     : x.art === 'rot'
       ? `<div class="warn">${x.t}</div>`
       : `<p>${x.t}</p>`).join('')}
-  <p class="hint">Das sind feste Regeln aus der Methode, kein Modell — die Datei läuft
-  offline und schickt nichts weg. Die Entscheidung bleibt deine.</p>
+  <p class="hint">Das sind feste Regeln aus der Methode, kein Modell — sie werden hier
+  im Browser gerechnet, nicht auf einem Server. Die Entscheidung bleibt deine.</p>
 
   <h3 style="margin-top:34px">Das nehme ich mir vor</h3>
   <p>Aus ${alle.length} Ansätzen: kreuz <b>drei bis fünf</b> an. Nicht mehr — mehr als
@@ -861,6 +863,20 @@ function abschluss(){
       <span class="q">${esc(x.bereich)} · ${esc(x.was)}</span>
       <span class="g">${x.g}</span>
     </label>`).join('')}
+  </div>
+
+  <h3 style="margin-top:34px">Rad und Vorsätze per Mail</h3>
+  <div class="mailk" id="mailkarte">
+    <p>Wenn du dein Rad behalten willst, schicken wir es dir zu. Erst dann verlassen
+    deine Werte diesen Browser — vorher liegt alles nur bei dir.</p>
+    <input id="lw-name" type="text" placeholder="Dein Name" autocomplete="name">
+    <input id="lw-mail" type="email" placeholder="deine@adresse.de" autocomplete="email">
+    <p class="hp"><input id="lw-web" type="text" tabindex="-1" autocomplete="off"></p>
+    <button class="go" onclick="radSenden()">Rad zuschicken</button>
+    <p class="hint" id="lw-status"></p>
+    <p class="hint">Wir speichern Name, Adresse, deine Werte und die gewählten Vorsätze,
+    um dir die Mail zu schicken und das Lebensrad weiterzuentwickeln. Keine Weitergabe
+    an Dritte.</p>
   </div>
 
   <div class="nav">
@@ -1106,7 +1122,7 @@ function vertiefung(){
   app.innerHTML = `
   ${fortHtml()}
   ${sprungHtml(b)}
-  <h2>Schritt 3 von 3 · Bereich ${vtIndex+1} von ${bereiche.length}</h2>
+  <h2>Schritt 3 von 5 · Bereich ${vtIndex+1} von ${bereiche.length}</h2>
   <h1>${esc(b.name)}</h1>
   <p>Aus dem Bauch hast du <b>${zahl(b.wert)}</b> gemalt. Diese Zahl misst gegen einen
   Maßstab, den bisher nur du kennst — und den du selbst noch nicht aufgeschrieben hast.
@@ -1675,8 +1691,106 @@ function kriseHtml(){
   return h;
 }
 
+/* ====================== Melden und Senden ======================
+   Das Lebensrad hat bisher nichts uebertragen. Zwei Dinge aendern das, beide bewusst
+   getrennt:
+   1. Eine ANONYME Verlaufsmeldung je Schritt — kein Name, keine Mail, keine Texte.
+      Die Sitzungskennung lebt nur im Arbeitsspeicher dieses Tabs, nicht im
+      localStorage und nicht in einem Cookie; beim Neuladen faengt eine neue an.
+      Damit ist messbar, an welchem Schritt Leute aufhoeren, ohne Personenbezug.
+   2. Das ERGEBNIS, nur auf ausdruecklichen Wunsch und nur gegen eine Mailadresse.
+   🔴 Beides geht an denselben Endpunkt wie alle anderen Tests. Vier Tests mit vier
+   Ablagen waeren genau die Zersplitterung, die das Mastermind Profile beenden soll. */
+const ENDPUNKT = 'https://yourmastermind.de/tests/speichern.php';
+const TEST = 'life-wheel';
+const SCHRITTE = 5;
+const SITZUNG = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+let zuletztGemeldet = null;
+
+function melde(ereignis, nr){
+  try {
+    fetch(ENDPUNKT, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      keepalive: true,
+      body: JSON.stringify({test: TEST, ereignis: ereignis, seite: nr,
+        von: SCHRITTE, sitzung: SITZUNG})
+    }).catch(() => {});
+  } catch(e){}
+}
+/* Ein Text, den man behalten kann — derselbe, der per Mail rausgeht. */
+function radText(){
+  const d = new Date().toLocaleDateString('de-DE');
+  const z = ['LEBENSRAD — ' + d, ''];
+  raenge().forEach((b,i) => {
+    const st = standort(b);
+    z.push(`${i+1}. ${b.name}: ${zahl1(wertVon(b))} von 10`
+      + (b.ess ? '   (essenziell)' : '')
+      + (st !== null && Math.abs(st - b.wert) >= 1 ? `   [Bauchwert ${zahl1(b.wert)}]` : ''));
+  });
+  const s = schwaechster();
+  if (s) z.push('', 'Schwaechster Bereich: ' + s.name + ' (' + zahl1(wertVon(s)) + ')');
+  const vor = zielListe().filter(x => x.vor);
+  if (vor.length){
+    z.push('', 'DAS NEHME ICH MIR VOR');
+    vor.forEach(x => {
+      z.push(`[${x.g}] ${x.schritt}`);
+      z.push(`      ${x.bereich} · ${x.was}`);
+      if (x.ziel) z.push(`      geloest: ${x.ziel}`);
+    });
+  }
+  return z.join('\n');
+}
+async function radSenden(){
+  const st = document.getElementById('lw-status');
+  const name = (document.getElementById('lw-name').value || '').trim();
+  const mail = (document.getElementById('lw-mail').value || '').trim();
+  if (name.length < 2){ st.textContent = 'Bitte trag deinen Namen ein.'; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(mail)){
+    st.textContent = 'Die Adresse sieht nicht richtig aus.'; return; }
+  st.textContent = 'Wird gesendet …';
+  const werte = {};
+  bereiche.forEach(b => { werte[b.name] = wertVon(b); });
+  const alle = Object.values(werte);
+  try {
+    const res = await fetch(ENDPUNKT, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        test: TEST, name: name, mail: mail,
+        web: document.getElementById('lw-web').value,   // Honigtopf
+        gesamt: alle.length ? Math.round(alle.reduce((a,b) => a+b, 0) / alle.length * 10) / 10 : null,
+        kennzahlen: {
+          spanne: Math.round((Math.max(...alle) - Math.min(...alle)) * 10) / 10,
+          schwaechster: (schwaechster() || {}).name || null,
+          vorsaetze: zielListe().filter(x => x.vor).length
+        },
+        dimensionen: werte,
+        antworten: bereiche.map(b => ({name: b.name, ess: b.ess || null, wert: b.wert,
+          standort: standort(b), vision: b.vision || null})),
+        text: radText()
+      })
+    });
+    const d = await res.json();
+    if (d && d.ok){
+      melde('gesendet', 5);
+      document.getElementById('mailkarte').innerHTML =
+        '<p>🟢 Erledigt — dein Rad ist unterwegs an <b>' + esc(mail) + '</b>.</p>'
+        + '<p class="hint">Schau notfalls im Spam-Ordner nach.</p>';
+    } else {
+      st.textContent = 'Das hat nicht geklappt: ' + ((d && d.fehler) || 'unbekannter Fehler')
+        + ' — sichere dir unten den Durchgang, dann geht nichts verloren.';
+    }
+  } catch(e){
+    st.textContent = 'Keine Verbindung. Sichere dir unten den Durchgang, dann geht nichts verloren.';
+  }
+}
+
 function render(){
   entwurfMerken();                   // zentral statt in jedem Aenderungspfad einzeln
+  if (seite !== zuletztGemeldet){
+    melde(zuletztGemeldet === null && seite === 0 ? 'start'
+      : (seite === 4 ? 'ende' : 'seite'), seite + 1);
+    zuletztGemeldet = seite;
+  }
   if (seite === 0) anlegen();
   else if (seite === 1) rad();
   else if (seite === 2) vertiefung();
