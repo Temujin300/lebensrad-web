@@ -1764,8 +1764,12 @@ async function radSenden(){
           vorsaetze: zielListe().filter(x => x.vor).length
         },
         dimensionen: werte,
+        /* 🔴 Frank am 04.09.2026: „nein, sie muessen mir nichts schicken, so lassen."
+           Im Lebensrad stehen Beziehungs-, Geld- und Gesundheitsthemen im Klartext.
+           Uebertragen werden deshalb ausschliesslich ZAHLEN und die selbst gewaehlten
+           Bereichsnamen — keine Vision, keine Herausforderungen, keine Notizen. */
         antworten: bereiche.map(b => ({name: b.name, ess: b.ess || null, wert: b.wert,
-          standort: standort(b), vision: b.vision || null})),
+          standort: standort(b)})),
         text: radText()
       })
     });
