@@ -868,15 +868,24 @@ function abschluss(){
   <h3 style="margin-top:34px">Rad und Vorsätze per Mail</h3>
   <div class="mailk" id="mailkarte">
     <p>Wenn du dein Rad behalten willst, schicken wir es dir zu. Erst dann verlassen
-    deine Werte diesen Browser — vorher liegt alles nur bei dir.</p>
+    Daten diesen Browser — vorher liegt alles nur bei dir.</p>
+    <p class="hint" style="margin:0 0 14px">Übertragen werden deine <b>Zahlen</b>: der Wert
+    je Bereich, die Namen, die du den Bereichen gegeben hast, und die Vorsätze, die du
+    oben angekreuzt hast. <b>Nicht</b> übertragen wird, was du geschrieben hast —
+    Vision, Stärken, Herausforderungen und Notizen bleiben in deinem Browser.
+    Die Mail geht an dich, eine Kopie an Frank Linke; er liest sie selbst.
+    Wenn du das nicht willst, sichere dir den Durchgang und die Vorsätze als Datei —
+    die Knöpfe darunter tun genau das, ohne dass irgendetwas gesendet wird.</p>
     <input id="lw-name" type="text" placeholder="Dein Name" autocomplete="name">
     <input id="lw-mail" type="email" placeholder="deine@adresse.de" autocomplete="email">
     <p class="hp"><input id="lw-web" type="text" tabindex="-1" autocomplete="off"></p>
     <button class="go" onclick="radSenden()">Rad zuschicken</button>
     <p class="hint" id="lw-status"></p>
-    <p class="hint">Wir speichern Name, Adresse, deine Werte und die gewählten Vorsätze,
-    um dir die Mail zu schicken und das Lebensrad weiterzuentwickeln. Keine Weitergabe
-    an Dritte.</p>
+    <p class="hint">Gespeichert wird auf einem eigenen Server in Deutschland, in einem
+    Verzeichnis, das über das Internet nicht abrufbar ist. Keine Weitergabe an Dritte,
+    Löschung spätestens nach 24 Monaten.
+    <a href="https://yourmastermind.de/datenschutzerklarung/" target="_blank"
+      rel="noreferrer noopener" style="color:var(--gold)">Datenschutz</a></p>
   </div>
 
   <div class="nav">
