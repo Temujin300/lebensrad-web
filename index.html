@@ -53,6 +53,13 @@ border:1px solid var(--line);border-radius:8px;padding:11px 14px}
 border-radius:6px;padding:6px 8px;font-family:inherit;font-size:13px}
 .zeile select:focus-visible{outline:2px solid var(--goldl);outline-offset:1px}
 .zeile select.auto{border-color:var(--goldd);color:var(--goldl)}
+.zeile select.wicht{color:var(--fg);min-width:98px}
+.zeile select.wicht.leer{color:var(--dim);border-color:var(--line)}
+.zeile select.wicht:not(.leer){border-color:var(--goldd)}
+.intro{max-width:640px}
+.intro h1{margin-bottom:.35em}
+.intro .lead{font-size:19px;line-height:1.55;color:#EDEDED;margin:0 0 1.1em}
+.intro .meta{color:var(--dim);font-size:15px;margin:0 0 26px}
 .warn{border:1px solid var(--gold);border-left-width:3px;border-radius:8px;
 background:#2A2114;padding:14px 16px;margin:0 0 14px;color:var(--fg);max-width:60ch}
 .warn b{color:var(--goldl)}
@@ -206,6 +213,8 @@ border:1px solid var(--line);border-radius:8px;padding:10px 14px}
 .wert .z{color:var(--gold);font-weight:800;font-size:21px;
 font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
 .wert .b{font-size:14px;color:var(--dim);flex:1}
+.wert .lk{font-size:13px;color:var(--goldl);font-variant-numeric:tabular-nums;
+white-space:nowrap}
 .wert.leer .z{color:var(--goldd)}
 @media(max-width:520px){.wrap{padding:20px 15px 52px}h1{font-size:26px}}
 </style></head><body>
@@ -401,19 +410,51 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
 const arg = s => esc(JSON.stringify(String(s)));
 
 let bereiche = [];          // {name, wert}  wert = null solange nicht ausgemalt
-let seite = 0;              // 0 = Bereiche anlegen, 1 = Rad
+let seite = 0;
+/* Die Startseite ist bewusst KEINE eigene Seitennummer: sonst verschiebt sich die
+   ganze Kette (Entwurf, Sprungziele, Abbruchmessung) fuer einen Bildschirm, der
+   genau einmal vorkommt. Ein Flag, das der Entwurf ueberschreibt. */
+let intro = true;
+
+function introSeite(){
+  app.innerHTML = `
+  <div class="intro">
+    <h1>Wo stehst du im Leben &mdash; und was ist dir wichtig?</h1>
+    <p class="lead">Das Lebensrad zeigt beides nebeneinander: wie wichtig dir ein
+    Bereich ist und wie voll er gerade l&auml;uft. Der gr&ouml;&szlig;te Abstand
+    zwischen beidem ist dein n&auml;chster Schritt &mdash; nicht der Bereich, der
+    am schlechtesten dasteht.</p>
+    <p class="meta">Vier bis acht eigene Bereiche &middot; dein Tempo &middot;
+    l&auml;uft in deinem Browser, dein Zwischenstand bleibt erhalten</p>
+    <div class="nav">
+      <button class="go" onclick="intro=false;render();window.scrollTo(0,0)">Anfangen</button>
+    </div>
+  </div>`;
+}              // 0 = Bereiche anlegen, 1 = Rad
 let zeigeVorschlaege = false;
 
 /* ============================ Seite 1: Bereiche ============================ */
 function anlegen(){
   app.innerHTML = `
   <h2>Schritt 1 von 5</h2>
-  <h1>Welche Bereiche hat dein Leben?</h1>
+  <h1>Welche Bereiche hat dein Leben — und was ist dir wichtig?</h1>
   <p>Schreib sie so auf, wie <b>du</b> sie nennst — nicht wie sie in einem Buch heißen.
   Vier bis acht Stück. Wenn dir „Liebe“ näher ist als „Partnerschaft“, dann schreib Liebe.</p>
+  <p>Sag zu jedem gleich dazu, <b>wie wichtig er dir ist</b> — von 1 (nebensächlich) bis
+  10 (daran hängt alles). Das ist nicht dasselbe wie „läuft gut“: Im nächsten Schritt
+  malst du aus, wie voll jeder Bereich <i>tatsächlich</i> ist. Der Abstand zwischen
+  beidem ist das, worauf es hinausläuft.</p>
 
   <div class="liste">${bereiche.map((b,i) => `
     <div class="zeile"><span class="n">${i+1}</span><span class="t">${esc(b.name)}</span>
+    <select class="wicht${b.wichtig === null ? ' leer' : ''}"
+      onchange="wichtigSetzen(${i}, this.value)"
+      aria-label="Wichtigkeit für ${esc(b.name)}"
+      title="Wie wichtig ist dir dieser Bereich? 1 = nebensächlich, 10 = daran hängt alles">
+      <option value=""${b.wichtig === null ? ' selected' : ''}>wichtig?</option>
+      ${[10,9,8,7,6,5,4,3,2,1].map(w => `<option value="${w}"${b.wichtig === w
+        ? ' selected' : ''}>wichtig ${w}</option>`).join('')}
+    </select>
     <select onchange="zuordnen(${i}, this.value)" aria-label="Zuordnung für ${esc(b.name)}"
       class="${b.essAuto ? 'auto' : ''}" title="${b.essAuto
         ? 'automatisch vorgeschlagen — du kannst es ändern' : 'essenzieller Bereich'}">
@@ -467,8 +508,13 @@ function anlegen(){
     <button class="go" ${bereiche.length >= MIN ? '' : 'disabled'} onclick="seite=1;render()">Weiter zum Rad</button>
     <span class="hint">${bereiche.length < MIN
       ? `noch ${MIN - bereiche.length} Bereich${MIN-bereiche.length===1?'':'e'}`
-      : (fehlend().length ? `${fehlend().length} Zuordnung${fehlend().length===1?'':'en'} offen —
-         du kannst trotzdem weiter` : '')}</span>
+      : (() => {
+          const ow = bereiche.filter(b => b.wichtig === null).length;
+          const teile = [];
+          if (ow) teile.push(`${ow}× Wichtigkeit offen`);
+          if (fehlend().length) teile.push(`${fehlend().length} Zuordnung${fehlend().length===1?'':'en'} offen`);
+          return teile.length ? teile.join(' · ') + ' — du kannst trotzdem weiter' : '';
+        })()}</span>
   </div>`;
   const f = document.getElementById('neu');
   if (f) f.focus();
@@ -484,11 +530,15 @@ function dazu(name){
   if (!t) return;
   if (bereiche.some(b => b.name.toLowerCase() === t.toLowerCase())) return;
   if (bereiche.length >= MAX) return;
-  bereiche.push({name:t, wert:null, ess:null});
+  bereiche.push({name:t, wert:null, wichtig:null, ess:null});
   autoZuordnen();
   render();
 }
 function weg(i){ bereiche.splice(i,1); autoZuordnen(); render(); }
+function wichtigSetzen(i, v){
+  bereiche[i].wichtig = v === '' ? null : Number(v);
+  render();
+}
 /* Jede essenzielle Rolle kann nur einmal vergeben werden — sonst waere „Beziehungen"
    doppelt abgedeckt und „Gesundheit" gar nicht, ohne dass es auffaellt. */
 function belegt(id, ausser){ return bereiche.some((b,j) => j !== ausser && b.ess === id); }
@@ -552,6 +602,24 @@ function rad(){
       opacity=".85" pointer-events="none"/>`;
   }).join('');
 
+  /* Die Wichtigkeit als Marke auf dem Segment: wo der Bereich stehen muesste, wenn er
+     so voll waere, wie er dir wichtig ist. Die Fuellung ist der Stand, die Marke der
+     Anspruch — der Abstand dazwischen ist die Aussage des ganzen Rades. */
+  const marken = bereiche.map((b,i) => {
+    if (b.wichtig === null) return '';
+    /* Bei Wichtigkeit 10 laege die Marke exakt auf der Aussenkontur und waere nicht
+       mehr als Marke zu erkennen — deshalb ein Pixel nach innen. */
+    const r = Math.min(RI + (R-RI) * b.wichtig/G, R - 1.5);
+    const a0 = -Math.PI/2 + i * 2*Math.PI/n;
+    const a1 = -Math.PI/2 + (i+1) * 2*Math.PI/n;
+    const p = (rad,w) => [M + rad*Math.cos(w), M + rad*Math.sin(w)];
+    const [x0,y0] = p(r,a0), [x1,y1] = p(r,a1);
+    const gross = (a1-a0) > Math.PI ? 1 : 0;
+    return `<path d="M${x0} ${y0} A${r} ${r} 0 ${gross} 1 ${x1} ${y1}" fill="none"
+      stroke="#FFF" stroke-width="2.6" opacity=".92" stroke-linecap="round"
+      pointer-events="none"/>`;
+  }).join('');
+
   const segs = bereiche.map((b,i) => {
     const voll = segment(i, n, R);
     const wert = b.wert === null ? 0 : b.wert;
@@ -607,7 +675,7 @@ function rad(){
   const offen = bereiche.filter(b => b.wert === null).length;
   app.innerHTML = `
   <h2>Schritt 2 von 5</h2>
-  <h1>Wie voll ist jeder Bereich?</h1>
+  <h1>Und wie voll ist jeder Bereich wirklich?</h1>
   <p>Zieh vom Mittelpunkt nach außen, bis das Stück so voll ist, wie der Bereich
   gerade läuft. <b>Null heißt: läuft extrem schlecht. Zehn heißt: perfekt, kein
   Verbesserungsbedarf.</b> Halbe Schritte sind möglich. Nimm dir Zeit dafür — das Nachdenken ist der Punkt,
@@ -617,6 +685,7 @@ function rad(){
     <svg viewBox="${vb}" id="svg">
       ${ringe.join('')}
       ${segs}
+      ${marken}
       ${kontur}
       <circle cx="${M}" cy="${M}" r="${RI}" fill="var(--bg)" stroke="var(--line)"/>
       ${labels}
@@ -626,10 +695,18 @@ function rad(){
   ${(typeof vorher === 'function' && vorher()) ? `<p class="hint" style="text-align:center;
     margin-top:-2px">Die gestrichelte Linie ist dein Rad vom ${esc(vorher().datum)}.</p>` : ''}
 
-  <div class="werte">${bereiche.map(b => `
-    <div class="wert${b.wert === null ? ' leer' : ''}">
+  ${bereiche.some(b => b.wichtig !== null) ? `<p class="hint" style="text-align:center;
+    margin-top:-2px">Die helle Linie ist deine Wichtigkeit — so voll müsste der Bereich
+    sein, damit er dir gerecht wird.</p>` : ''}
+
+  <div class="werte">${bereiche.map(b => {
+    const l = luecke(b);
+    return `<div class="wert${b.wert === null ? ' leer' : ''}">
       <span class="z">${b.wert === null ? '–' : zahl(b.wert)}</span>
-      <span class="b">${esc(b.name)}</span></div>`).join('')}
+      <span class="b">${esc(b.name)}</span>
+      ${l !== null && l > 0 ? `<span class="lk" title="Abstand zu deiner Wichtigkeit ${
+        b.wichtig}">−${zahl(l)}</span>` : ''}</div>`;
+  }).join('')}
   </div>
 
   <div class="nav">
@@ -744,6 +821,17 @@ function empfehlungHtml(){
       ${esc(roher.name)} (${zahl1(wertVon(roher))}) — aber er deckt <b>${esc(ess)}</b> ab,
       einen der drei essenziellen Bereiche, und der andere nicht. Bei diesem Abstand geht
       der essenzielle vor.`;
+  /* 🔴 Hier stand einmal „kein anderer Bereich hat diesen Abstand" — eine Behauptung,
+     die nirgends geprueft wurde. Es wird nur noch gesagt, was nachgerechnet ist. */
+  const lk = luecke(b);
+  if (lk !== null && lk > 0){
+    const alle = bereiche.map(luecke).filter(x => x !== null);
+    const groesste = alle.length > 1 && lk >= Math.max(...alle);
+    grund += ` Wichtig ist er dir mit <b>${b.wichtig}</b> — das sind
+      <b>${zahl(lk)} Punkte</b> Abstand zwischen dem, was dir der Bereich wert ist,
+      und dem, was er dir gerade gibt.${groesste
+        ? ' Das ist der größte Abstand in deinem ganzen Rad.' : ''}`;
+  }
   if (st !== null && su.h > su.s) grund += ` Er ist der einzige, in dem die Lücken
     schwerer wiegen als die Stärken (${su.h} gegen ${su.s} Punkte).`;
 
@@ -847,7 +935,18 @@ function fertig(){
 const ESS_BONUS = 1.5;
 
 function wertVon(b){ const st = standort(b); return st !== null ? st : b.wert; }
-function prioWert(b){ return wertVon(b) - (b.ess ? ESS_BONUS : 0); }
+/* Die Wichtigkeit zieht in dieselbe Richtung wie der Bonus fuer essenzielle Bereiche
+   und in derselben Groessenordnung: ein Bereich mit Wichtigkeit 10 rueckt um 1,6
+   Punkte nach vorn, einer mit 1 um 1,6 nach hinten. Wer keine Wichtigkeit gesetzt hat,
+   wird behandelt wie bisher — der Test bleibt ohne diese Angabe vollstaendig. */
+const WICHT_MITTE = 5.5, WICHT_FAKTOR = 0.35;
+function wichtBonus(b){ return b.wichtig === null ? 0 : (b.wichtig - WICHT_MITTE) * WICHT_FAKTOR; }
+function prioWert(b){ return wertVon(b) - (b.ess ? ESS_BONUS : 0) - wichtBonus(b); }
+/* Der Abstand zwischen Anspruch und Stand. Das ist die Zahl, die der Nutzer sucht. */
+function luecke(b){
+  if (b.wichtig === null || b.wert === null) return null;
+  return Math.round((b.wichtig - wertVon(b)) * 2) / 2;
+}
 
 /* Die Reihenfolge liegt in b.rang, NICHT in der Reihenfolge von `bereiche` — die
    bestimmt die Segmente im Rad und darf sich nicht verschieben. */
@@ -970,7 +1069,8 @@ function abschluss(){
   </div>
   <div class="nav" style="margin-top:10px">
     <button class="ghost" onclick="rangVorschlag()">Vorschlag der Methode übernehmen</button>
-    <span class="hint">schwächster zuerst · essenzielle mit ${zahl1(ESS_BONUS)} Punkten Vorsprung</span>
+    <span class="hint">größte Lücke zuerst · essenzielle mit ${zahl1(ESS_BONUS)} Punkten
+      Vorsprung${bereiche.some(b => b.wichtig !== null) ? ' · Wichtigkeit zählt mit' : ''}</span>
   </div>
 
   <h3 style="margin-top:34px">Was die Methode dazu sagt</h3>
@@ -1530,6 +1630,7 @@ function entwurfLaden(){
     const e = JSON.parse(roh);
     if (!e || !Array.isArray(e.bereiche) || !e.bereiche.length) return false;
     bereiche = e.bereiche;
+    intro = false;                     // ein laufender Durchgang faengt nicht neu an
     seite = Math.min(4, Math.max(0, e.seite | 0));
     vtIndex = Math.min(bereiche.length - 1, Math.max(0, e.vtIndex | 0));
     fortgesetzt = e.datum || null;
@@ -1540,7 +1641,7 @@ function entwurfLaden(){
 function entwurfWeg(){
   if (!confirm('Diesen Durchgang verwerfen und neu anfangen?')) return;
   try { localStorage.removeItem(ENTWURF); } catch(e){}
-  bereiche = []; seite = 0; vtIndex = 0; fortgesetzt = null; render();
+  bereiche = []; seite = 0; vtIndex = 0; fortgesetzt = null; intro = true; render();
 }
 /* 🔴 Der Entwurf lag bisher NUR im localStorage — nicht rettbar, nicht weiterreichbar,
    nicht lesbar ausser im selben Browser. Bei einem Durchgang, der eine Sitzung dauert,
@@ -1961,6 +2062,7 @@ function render(){
       : (seite === 4 ? 'ende' : 'seite'), seite + 1);
     zuletztGemeldet = seite;
   }
+  if (intro) return introSeite();
   if (seite === 0) anlegen();
   else if (seite === 1) rad();
   else if (seite === 2) vertiefung();
