@@ -2090,9 +2090,15 @@ function fussHtml(){
 
 function render(){
   entwurfMerken();                   // zentral statt in jedem Aenderungspfad einzeln
-  if (seite !== zuletztGemeldet){
-    melde(zuletztGemeldet === null && seite === 0 ? 'start'
-      : (seite === 4 ? 'ende' : 'seite'), seite + 1);
+  /* Erst melden, wenn der Test wirklich begonnen hat. Die Intro-Seite ist ein
+     Seitenaufruf, kein Start: sonst zaehlt jeder, der nur das Erklaervideo anschaut,
+     als angefangener Durchlauf und die Quote ist mit den anderen Tests nicht
+     vergleichbar. Der Freedom Score meldet 'start' beim Klick auf Anfangen, nicht
+     beim Laden der Seite. Vorher fiel ausserdem der Uebergang Intro -> Seite 0 aus,
+     weil nur 'seite' verglichen wurde und die sich dabei nicht aendert. */
+  if (!intro && seite !== zuletztGemeldet){
+    if (zuletztGemeldet === null) melde('start', 0);
+    melde(seite === SCHRITTE - 1 ? 'ende' : 'seite', seite + 1);
     zuletztGemeldet = seite;
   }
   /* Faktenlabel, Anleitung und Video nur auf der Einstiegsseite */
