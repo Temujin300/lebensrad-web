@@ -1383,8 +1383,13 @@ function summen(b){
    6,4?" — Luecken zaehlen seither 1,5-fach (LUECKE_FAKTOR). Geprueft an seinem Durchgang:
    Durchschnitt statt Summe (Variante A) drueckte alle Bereiche auf ~5 und loeschte, wie
    viele Staerken jemand hat; der Faktor behaelt Reihenfolge und Abstaende und laesst nur
-   das Fehlende schwerer wiegen. Mit Faktor waere der 2019er Wert 304/(304+262,5) = 5,4. */
-const LUECKE_FAKTOR = 1.5;
+   das Fehlende schwerer wiegen. Mit Faktor waere der 2019er Wert 304/(304+262,5) = 5,4.
+   🔴 Nach dem fertigen Durchgang am selben Tag zurueck auf 1,0 (Frank: „ja"). Die Formel
+   liegt nicht pauschal zu tief, sie staucht zur Mitte — hohe Bauchwerte fallen stark, der
+   schwaechste Bereich kaum. Ein Faktor verschiebt nur alles; unter 1 hob er den Engpass
+   (Unternehmerenergie 4,5) sogar ueber das Gefuehl. Aussagekraeftig ist die Reihenfolge,
+   nicht der Abstand je Bereich. Faktor bleibt als Schalter, die Hinweise erscheinen nur ≠ 1. */
+const LUECKE_FAKTOR = 1;
 function standort(b){
   const {s, h, ohne} = summen(b);
   if (ohne) return null;              // halbe Summe ist kein Standort
@@ -1456,8 +1461,8 @@ function beispielHtml(offen){
       ${e.schwer.map(x => zeile(x, true)).join('')}</li>
   </ol>
   <p class="hint">Daraus rechnet der Test den <b>Standort</b>: ${s.s} Punkte Stärken gegen ${s.h}
-  Punkte Lücken ergeben <b>${zahl1(st)}</b>. Lücken zählen dabei ${zahl1(LUECKE_FAKTOR)}-fach, weil Fehlendes
-  im Alltag stärker bremst, als Vorhandenes trägt. Das sind ${zahl1(e.wert - st)} weniger als die ${zahl(e.wert)} aus dem Bauch.
+  Punkte Lücken ergeben <b>${zahl1(st)}</b>.${LUECKE_FAKTOR !== 1 ? ` Lücken zählen dabei ${zahl1(LUECKE_FAKTOR)}-fach, weil Fehlendes
+  im Alltag stärker bremst, als Vorhandenes trägt.` : ''} Das sind ${zahl1(e.wert - st)} weniger als die ${zahl(e.wert)} aus dem Bauch.
   Genau dieser Abstand ist die Erkenntnis: Was fehlt, wiegt oft schwerer, als es sich anfühlt.
   Die Leiste ganz oben zeigt dir bei jedem Bereich, welcher der vier Schritte noch offen ist.</p>
   </details>`;
@@ -1660,7 +1665,7 @@ function standHtml(b){
     <div class="p">
       <span><span class="lb">Gemalt</span><span class="bauch">${zahl(b.wert)}</span></span>
       <span><span class="lb">Gerechnet</span><span class="rech">${zahl1(st)}</span></span>
-      <span class="hint">${s} Punkte Stärken gegen ${h} Punkte Herausforderungen · Lücken zählen ${zahl1(LUECKE_FAKTOR)}-fach</span>
+      <span class="hint">${s} Punkte Stärken gegen ${h} Punkte Herausforderungen${LUECKE_FAKTOR !== 1 ? ` · Lücken zählen ${zahl1(LUECKE_FAKTOR)}-fach` : ''}</span>
     </div>
     ${Math.abs(d) < 0.5
       ? `<p>Gefühl und Rechnung liegen dicht beieinander. Deine ${zahl(b.wert)} hält
