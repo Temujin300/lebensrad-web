@@ -1378,12 +1378,18 @@ function summen(b){
   return {s, h, ohne};
 }
 /* Standort = Staerkengewicht geteilt durch Gesamtgewicht, auf die Skala 0..10 gelegt.
-   Franks 2019er Wert fuer persoenliche Entwicklung: 304/(304+175) = 6,3. */
+   Franks 2019er Wert fuer persoenliche Entwicklung: 304/(304+175) = 6,3 (alte Formel).
+   🔴 Frank 19.09.2026: „die wertung scheint mir bei herausforderungen zu hoch 2 negative und
+   6,4?" — Luecken zaehlen seither 1,5-fach (LUECKE_FAKTOR). Geprueft an seinem Durchgang:
+   Durchschnitt statt Summe (Variante A) drueckte alle Bereiche auf ~5 und loeschte, wie
+   viele Staerken jemand hat; der Faktor behaelt Reihenfolge und Abstaende und laesst nur
+   das Fehlende schwerer wiegen. Mit Faktor waere der 2019er Wert 304/(304+262,5) = 5,4. */
+const LUECKE_FAKTOR = 1.5;
 function standort(b){
   const {s, h, ohne} = summen(b);
   if (ohne) return null;              // halbe Summe ist kein Standort
   if (!s && !h) return null;
-  return Math.round(100 * s / (s + h)) / 10;
+  return Math.round(100 * s / (s + LUECKE_FAKTOR * h)) / 10;
 }
 /* Die Quote haengt an der LAENGE der beiden Listen, nicht nur an ihren Gewichten. Wer
    acht Staerken und zwei Herausforderungen aufschreibt, bekommt eine hohe Zahl — auch
@@ -1450,7 +1456,8 @@ function beispielHtml(offen){
       ${e.schwer.map(x => zeile(x, true)).join('')}</li>
   </ol>
   <p class="hint">Daraus rechnet der Test den <b>Standort</b>: ${s.s} Punkte Stärken gegen ${s.h}
-  Punkte Lücken ergeben <b>${zahl1(st)}</b>. Das sind ${zahl1(e.wert - st)} weniger als die ${zahl(e.wert)} aus dem Bauch.
+  Punkte Lücken ergeben <b>${zahl1(st)}</b>. Lücken zählen dabei ${zahl1(LUECKE_FAKTOR)}-fach, weil Fehlendes
+  im Alltag stärker bremst, als Vorhandenes trägt. Das sind ${zahl1(e.wert - st)} weniger als die ${zahl(e.wert)} aus dem Bauch.
   Genau dieser Abstand ist die Erkenntnis: Was fehlt, wiegt oft schwerer, als es sich anfühlt.
   Die Leiste ganz oben zeigt dir bei jedem Bereich, welcher der vier Schritte noch offen ist.</p>
   </details>`;
@@ -1502,8 +1509,10 @@ function vertiefung(){
   ${beispielHtml(vtIndex === 0 && !b.unter.length && !b.stark.length)}
 
   <h3 id="blk1"><span class="n">1</span>Woraus besteht dieser Bereich?</h3>
-  <p>Zerleg ihn erst, bevor du ihn bewertest. Zwei bis acht Bestandteile reichen —
-  Namen genügen, definiert wird gleich.</p>
+  <p>Zerleg ihn erst, bevor du ihn bewertest. Zwei bis acht Bestandteile reichen,
+  Namen genügen — definiert wird gleich. Schreib sie in deinen eigenen Worten ins Feld
+  darunter${liste ? ` oder hol dir Vorschläge über <b>„Ich brauche Ideen“</b> und klick an,
+  was passt. Eigene Worte sind meist treffender, die Ideen helfen beim Anfangen` : ''}.</p>
   <div class="chips">${b.unter.map((u,i) => `
     <span class="chip">${esc(u.name)}
       <button onclick="vtWeg('unter',${i})" aria-label="${esc(u.name)} entfernen">×</button>
@@ -1651,7 +1660,7 @@ function standHtml(b){
     <div class="p">
       <span><span class="lb">Gemalt</span><span class="bauch">${zahl(b.wert)}</span></span>
       <span><span class="lb">Gerechnet</span><span class="rech">${zahl1(st)}</span></span>
-      <span class="hint">${s} Punkte Stärken gegen ${h} Punkte Herausforderungen</span>
+      <span class="hint">${s} Punkte Stärken gegen ${h} Punkte Herausforderungen · Lücken zählen ${zahl1(LUECKE_FAKTOR)}-fach</span>
     </div>
     ${Math.abs(d) < 0.5
       ? `<p>Gefühl und Rechnung liegen dicht beieinander. Deine ${zahl(b.wert)} hält
