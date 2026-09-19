@@ -186,6 +186,16 @@ padding:7px 11px;font-size:12.5px;display:flex;gap:8px;align-items:center;cursor
 font-family:inherit}
 .jb span{color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
 .jb.warn{border-color:var(--goldd)}
+.bsp{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0 18px;margin:18px 0 8px}
+.bsp summary{cursor:pointer;padding:14px 0;color:var(--gold);font-weight:700;list-style:none}
+.bsp summary::-webkit-details-marker{display:none}
+.bsp summary::before{content:'+ '}
+.bsp[open] summary::before{content:'– '}
+.bsp ol{margin:0 0 6px;padding-left:20px}
+.bsp li{margin:0 0 14px;color:var(--dim)}
+.bsp li b{color:var(--fg)}
+.bsp .z{display:block;margin-top:4px;padding-left:12px;border-left:2px solid var(--goldd)}
+.bsp .g{color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
 .jb.warn span{color:var(--goldl)}
 .jb:hover{border-color:var(--goldd)}
 h3,#stand{scroll-margin-top:62px}
@@ -1408,6 +1418,44 @@ function springe(id){
   const el = document.getElementById(id);
   if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
+/* 🔴 Frank 19.09.2026: „ist uebrigens fuer jemand der den Test zum 1. Mal macht nicht leicht
+   zu verstehen" — „bau das Beispiel gleich ein". Ein fertig ausgefuellter Bereich, einmal
+   durch alle vier Bloecke. Der Standort wird mit standort() gerechnet, nicht hingeschrieben:
+   aendert sich die Formel, stimmt das Beispiel trotzdem. Aufgeklappt nur beim ersten,
+   noch leeren Bereich — danach kennt man es. */
+const BEISPIEL = {name:'Gesundheit', wert:8,
+  unter:[{name:'Schlaf', ziel:'An 6 von 7 Nächten 7½ Stunden, höchstens einmal aufwachen.'},
+         {name:'Kraft', ziel:'4× pro Woche Training, jeden Monat ein bisschen stärker.'},
+         {name:'Ernährung', ziel:'An 5 von 7 Tagen nach Plan essen.'}],
+  stark:[{text:'Trainiere seit drei Jahren 4× pro Woche', g:8},
+         {text:'Esse unter der Woche fast immer nach Plan', g:6}],
+  schwer:[{text:'Wache nachts zwei- bis dreimal auf', g:7, schritt:'Ab 19 Uhr nichts mehr trinken'},
+          {text:'Am Wochenende esse ich, was gerade da ist', g:4, schritt:'Samstags für zwei Tage vorkochen'}]};
+function beispielHtml(offen){
+  const e = BEISPIEL, st = standort(e), s = summen(e);
+  const zeile = (x, mitSchritt) => `<span class="z">${esc(x.text)} · Gewicht <span class="g">${x.g}</span>${
+    mitSchritt ? `<br>Nächster Schritt: ${esc(x.schritt)}` : ''}</span>`;
+  return `<details class="bsp"${offen ? ' open' : ''}><summary>So sieht ein fertiger Bereich aus — ein Beispiel</summary>
+  <p class="hint" style="margin-top:0">Jemand hat „${e.name}“ aus dem Bauch mit <b>${zahl(e.wert)}</b> bewertet.
+  Auf dieser Seite prüft er die Zahl in vier Schritten:</p>
+  <ol>
+    <li><b>Zerlegen.</b> Woraus besteht Gesundheit für ihn?
+      <span class="z">${e.unter.map(u => esc(u.name)).join(' · ')}</span></li>
+    <li><b>Die Latte legen.</b> Für jeden Teil ein Satz, woran er merkt, dass es perfekt ist:
+      ${e.unter.map(u => `<span class="z">${esc(u.name)}: ${esc(u.ziel)}</span>`).join('')}</li>
+    <li><b>Was schon da ist.</b> Das Gewicht von 1 bis 10 sagt, wie viel es zu den 100 % beiträgt:
+      ${e.stark.map(x => zeile(x, false)).join('')}</li>
+    <li><b>Was noch fehlt.</b> Das Gewicht sagt, wie schwer die Lücke wiegt. Zu jeder Lücke ein
+      erster konkreter Schritt, denn daraus wird am Ende das Ziel:
+      ${e.schwer.map(x => zeile(x, true)).join('')}</li>
+  </ol>
+  <p class="hint">Daraus rechnet der Test den <b>Standort</b>: ${s.s} Punkte Stärken gegen ${s.h}
+  Punkte Lücken ergeben <b>${zahl1(st)}</b>. Das sind ${zahl1(e.wert - st)} weniger als die ${zahl(e.wert)} aus dem Bauch.
+  Genau dieser Abstand ist die Erkenntnis: Was fehlt, wiegt oft schwerer, als es sich anfühlt.
+  Die Leiste ganz oben zeigt dir bei jedem Bereich, welcher der vier Schritte noch offen ist.</p>
+  </details>`;
+}
+
 function sprungHtml(b){
   const ziele = (b.unter || []).filter(u => (u.ziel || '').trim()).length;
   const st = standort(b), oh = summen(b).ohne;
@@ -1451,6 +1499,7 @@ function vertiefung(){
   Maßstab, den bisher nur du kennst — und den du selbst noch nicht aufgeschrieben hast.
   Das ist jetzt dran: <b>erst zerlegen, dann die Latte legen, dann zählen, was schon
   da ist und was fehlt.</b></p>
+  ${beispielHtml(vtIndex === 0 && !b.unter.length && !b.stark.length)}
 
   <h3 id="blk1"><span class="n">1</span>Woraus besteht dieser Bereich?</h3>
   <p>Zerleg ihn erst, bevor du ihn bewertest. Zwei bis acht Bestandteile reichen —
