@@ -342,7 +342,8 @@ const ACHSEN = [
          'geschäft','umsetzung'],
    auch:['disziplin','gewohnheit','dranbleiben','wirksamkeit','leistung','projekt']},
   {id:'social', name:'Social Value',
-   kern:['beziehung','liebe','partner','ehe','familie','freunde','sozial','kontakt'],
+   /* „freund" statt „freunde": sonst fiel „Freundschaft" durch alle Achsen (19.09.2026). */
+   kern:['beziehung','liebe','partner','ehe','familie','freund','sozial','kontakt'],
    auch:['netzwerk','umfeld','gemeinschaft','beitrag','ehrenamt','engagement',
          'zurueckgeben','zurückgeben','kinder','eltern']},
   {id:'finanz', name:'Finanzielle Intelligenz',
@@ -370,6 +371,12 @@ function achsenVorschlagen(){
       const p = punkte(a.kern, 2) + punkte(a.auch, 1);
       if (p > bp){ best = a; bp = p; }
     });
+    /* 🔴 Geldwoerter haben Vorrang. „Energie" steht oft bildlich im Namen — Franks
+       „finanzielle Energie" landete am 19.09.2026 bei Energieintelligenz, weil
+       „energie" (7 Zeichen) laenger ist als „finanz" (6). Ein Geldwort ist dagegen nie
+       bildlich gemeint. Der ess-Marker taugt dafuer nicht: „fin" umfasst auch den Beruf. */
+    const finanz = ACHSEN.find(a => a.id === 'finanz');
+    if (finanz.kern.some(w => n.includes(w))) best = finanz;
     b.achse = best ? best.id : null;
     b.achseAuto = true;
   });
