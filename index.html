@@ -1203,6 +1203,17 @@ function abschluss(){
     <button class="go" onclick="vorsaetzeExport()" ${gewaehlt ? '' : 'disabled'}>
       ${gewaehlt ? 'Vorsätze als Datei sichern' : 'noch nichts gewählt'}</button>
     <button class="ghost" onclick="seite=3;render();window.scrollTo(0,0)">Zurück zum Rad</button>
+  </div>
+
+  <div class="mailk" style="margin-top:34px">
+    <h3 style="margin-top:0">Weiter zum nächsten Test</h3>
+    <p>Das Lebensrad zeigt deinen Anspruch — wie du deine Bereiche bewertest. Der
+    <b>Habit Score</b> zeigt daneben, was du tatsächlich tust. Direkt im Anschluss ist er
+    am aussagekräftigsten.</p>
+    <div class="nav" style="margin-top:12px">
+      <button class="go" onclick="(window.top||window).location.href='https://yourmastermind.de/habit-score/'">Zum Habit Score</button>
+      <button class="ghost" onclick="(window.top||window).location.href='https://yourmastermind.de/persoenlichkeitstests/'">Alle sechs Tests</button>
+    </div>
   </div>`;
 }
 
@@ -1562,7 +1573,8 @@ function vertiefung(){
 
   <h3 id="blk3"><span class="n">3</span>Was davon ist schon da?</h3>
   <p>Was läuft in diesem Bereich bereits gut, was hast du erreicht? Wie stark es zählt,
-  entscheidest du je Zeile.</p>
+  entscheidest du je Zeile. <b>Höchstens fünf</b> — hier und bei den Lücken gleich viele,
+  damit nicht die Anzahl entscheidet, sondern das Gewicht.</p>
   <div class="rowl">${b.stark.map((x,i) => `
     <div class="row">
       <div class="kopf">
@@ -1578,12 +1590,15 @@ function vertiefung(){
     </div>`).join('')}
   </div>
   <div class="nav" style="margin-top:0">
-    <button class="ghost" onclick="vtDazu('stark')">+ Stärke</button>
+    ${b.stark.length < MAX_ZEILEN
+      ? `<button class="ghost" onclick="vtDazu('stark')">+ Stärke</button>`
+      : `<span class="hint">Höchstens ${MAX_ZEILEN} — nimm die, die am meisten wiegen.${b.stark.length > MAX_ZEILEN
+          ? ` Du hast ${b.stark.length}; streich, was am wenigsten zählt.` : ''}</span>`}
   </div>
 
   <h3 id="blk4"><span class="n">4</span>Was fehlt noch bis 100 %?</h3>
   <p>Die Lücke zwischen dem, was du oben beschrieben hast, und heute. Das Gewicht sagt,
-  wie schwer die Herausforderung wiegt. <b>Der nächste Schritt ist das, woraus später
+  wie schwer die Herausforderung wiegt, höchstens fünf. <b>Der nächste Schritt ist das, woraus später
   dein Ziel wird</b> — je konkreter, desto weniger musst du beim Zielesetzen noch
   erfinden.</p>
   <div class="rowl">${b.schwer.map((x,i) => `
@@ -1609,7 +1624,10 @@ function vertiefung(){
     </div>`).join('')}
   </div>
   <div class="nav" style="margin-top:0">
-    <button class="ghost" onclick="vtDazu('schwer')">+ Herausforderung</button>
+    ${b.schwer.length < MAX_ZEILEN
+      ? `<button class="ghost" onclick="vtDazu('schwer')">+ Herausforderung</button>`
+      : `<span class="hint">Höchstens ${MAX_ZEILEN} — nimm die, die am meisten wiegen.${b.schwer.length > MAX_ZEILEN
+          ? ` Du hast ${b.schwer.length}; streich, was am wenigsten zählt.` : ''}</span>`}
   </div>
 
   <div id="stand">${standHtml(b)}</div>
@@ -1711,6 +1729,13 @@ function vtRad(w){
   bereiche[vtIndex].wert = Math.round(w * 2) / 2;   // das Rad kennt nur halbe Schritte
   render();
 }
+/* 🔴 Frank 19.09.2026: „die meisten reflektierten Menschen werden viel negatives finden, das
+   verfaelscht das Ergebnis ein wenig ... vorab auf 5 positives und negatives beschraenken".
+   Der Standort ist ein Summenverhaeltnis — wer mehr Luecken als Staerken aufschreibt, drueckt
+   ihn allein durch die Anzahl. Gleiche Obergrenze auf beiden Seiten: dann entscheiden die
+   Gewichte, nicht der Fleiss beim Aufzaehlen. Aeltere Durchgaenge mit mehr Zeilen bleiben
+   stehen, es kommt nur nichts mehr dazu. */
+const MAX_ZEILEN = 5;
 function vtDazu(feld, name){
   const b = bereiche[vtIndex];
   if (feld === 'unter'){
@@ -1721,10 +1746,10 @@ function vtDazu(feld, name){
     if (b.unter.some(u => u.name.toLowerCase() === t.toLowerCase())) return;
     b.unter.push({name:t, ziel:''});
   } else if (feld === 'stark'){
-    if (b.stark.length >= 20) return;
+    if (b.stark.length >= MAX_ZEILEN) return;
     b.stark.push({text:'', g:null, ausbau:''});
   } else {
-    if (b.schwer.length >= 20) return;
+    if (b.schwer.length >= MAX_ZEILEN) return;
     b.schwer.push({text:'', g:null, loesung:'', schritt:''});
   }
   render(); entwurfMerken();
