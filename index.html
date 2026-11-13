@@ -874,8 +874,8 @@ function radBedienung(){
    eine Stunde gearbeitet und will EINEN Satz, nicht das Material noch einmal.
    Jetzt: das Rad, die Empfehlung, fertig. Alles andere liegt aufklappbar darunter. */
 function schwaechster(){
-  /* Der Bereich, bei dem es zuerst hakt. Wo eine Rechnung vorliegt, zaehlt sie — sie ist
-     begruendet, der gemalte Wert ist nur gefuehlt. Essenzielle Bereiche bekommen den
+  /* Der Bereich, bei dem es zuerst hakt. Es zaehlt der gemalte Wert (siehe wertVon).
+     Essenzielle Bereiche bekommen den
      Bonus aus prioWert(); dieselbe Regel wie im Abschluss, damit nicht zwei Stellen
      derselben Datei zwei verschiedene Bereiche empfehlen. */
   return bereiche.reduce((a,b) => prioWert(b) < prioWert(a) ? b : a);
@@ -883,7 +883,7 @@ function schwaechster(){
 function empfehlungHtml(){
   const b = schwaechster();
   const st = standort(b);
-  const w  = st !== null ? st : b.wert;
+  const w  = b.wert;
   const ess = (ESSENZIELL.find(e => e.id === b.ess) || {}).lang;
   const su = summen(b);
   const lueck = (b.schwer || []).filter(x => (x.text || '').trim());
@@ -893,7 +893,7 @@ function empfehlungHtml(){
                      .sort((x,y) => (y.g||0) - (x.g||0)).slice(0,3);
 
   const roher = bereiche.reduce((a,c) => wertVon(c) < wertVon(a) ? c : a);
-  let grund = `Mit <b>${st !== null ? zahl1(st) : zahl(b.wert)}</b> ist das dein
+  let grund = `Mit <b>${zahl(b.wert)}</b> ist das dein
     schwächster Bereich${ess ? ` — und er deckt <b>${esc(ess)}</b> ab, einen der drei
     essenziellen` : ''}.`;
   if (roher.name !== b.name)
@@ -912,8 +912,9 @@ function empfehlungHtml(){
       und dem, was er dir gerade gibt.${groesste
         ? ' Das ist der größte Abstand in deinem ganzen Rad.' : ''}`;
   }
-  if (st !== null && su.h > su.s) grund += ` Er ist der einzige, in dem die Lücken
-    schwerer wiegen als die Stärken (${su.h} gegen ${su.s} Punkte).`;
+  if (st !== null && su.h > su.s) grund += ` In deiner Aufstellung wiegen hier die
+    Lücken mehr als die Stärken (${su.h} gegen ${su.s} Punkte) — hier liegt der meiste
+    Weg zu deinen 100 %.`;
 
   let tun;
   if (ohne.length >= Math.max(2, lueck.length / 2)){
@@ -975,7 +976,7 @@ function fertig(){
   <details class="auf"><summary>Deine Bereiche auf den zehn Intelligenzen</summary>
     ${achsenHtml()}</details>
 
-  <details class="auf"><summary>Gefühl und Rechnung je Bereich</summary>
+  <details class="auf"><summary>Vorher und nachher je Bereich</summary>
     ${gegenHtml()}</details>
 
   <details class="auf"><summary>Alle Ansätze fürs Zielesetzen${zahlZiele
@@ -1014,7 +1015,13 @@ function fertig(){
    Abstand 1,4, also Gesundheit knapp zuerst. */
 const ESS_BONUS = 1.5;
 
-function wertVon(b){ const st = standort(b); return st !== null ? st : b.wert; }
+/* 🔴 Frank 13.11.2026: „jemand mit hohem Bewusstsein wird immer auch negative Dinge
+   aufzählen, der Wert dazu passt meiner Ansicht aber nicht." Die Quote Staerken gegen
+   Gesamtgewicht ergibt bei gleich langen Listen immer 5,0 — egal wie gut der Bereich
+   laeuft — und zieht jede Luecke (= Weg zu 100 %) vom Ist ab. Deshalb fuehrt ab jetzt
+   der GEMALTE Wert: Reihenfolge, Empfehlung, Luecke zum Anspruch. Die Aufstellung
+   steht nur noch als Abgleich daneben. */
+function wertVon(b){ return b.wert; }
 /* Die Wichtigkeit zieht in dieselbe Richtung wie der Bonus fuer essenzielle Bereiche
    und in derselben Groessenordnung: ein Bereich mit Wichtigkeit 10 rueckt um 1,6
    Punkte nach vorn, einer mit 1 um 1,6 nach hinten. Wer keine Wichtigkeit gesetzt hat,
@@ -1312,8 +1319,8 @@ function zieleExport(){
   z.push('');
   bereiche.forEach(b => {
     z.push('=== ' + b.name + ' ===');
-    z.push('gemalt: ' + zahl(b.wert) +
-           (standort(b) !== null ? '   gerechnet: ' + zahl1(standort(b)) : ''));
+    z.push((typeof b.vorher === 'number' && b.vorher !== b.wert
+           ? 'vorher: ' + zahl(b.vorher) + '   nach der Vertiefung: ' : 'Wert: ') + zahl(b.wert));
     if ((b.vision || '').trim()){ z.push(''); z.push('100 %: ' + b.vision.trim()); }
     (b.unter || []).filter(u => (u.ziel || '').trim())
       .forEach(u => z.push('  · ' + u.name + ': ' + u.ziel.trim()));
@@ -1430,7 +1437,7 @@ function ohneSchritt(b){
    anklicken fuehrt direkt hin, und „Vertiefung" setzt beim ersten unfertigen Bereich ein.
    Unfertig heisst: kein Standort (nichts oder nicht alles gewichtet) oder Luecken ohne
    naechsten Schritt — dieselben Kriterien, an denen die Vertiefung selbst warnt. */
-function unfertig(b){ return standort(b) === null || ohneSchritt(b) > 0; }
+function unfertig(b){ return standort(b) === null || ohneSchritt(b) > 0 || !b.neu; }
 function zurVertiefung(name){
   let i = name === undefined ? bereiche.findIndex(unfertig) : bereiche.findIndex(b => b.name === name);
   if (i < 0) i = 0;
@@ -1452,7 +1459,7 @@ function springe(id){
    durch alle vier Bloecke. Der Standort wird mit standort() gerechnet, nicht hingeschrieben:
    aendert sich die Formel, stimmt das Beispiel trotzdem. Aufgeklappt nur beim ersten,
    noch leeren Bereich — danach kennt man es. */
-const BEISPIEL = {name:'Gesundheit', wert:8,
+const BEISPIEL = {name:'Gesundheit', wert:8, neu:7.5,
   unter:[{name:'Schlaf', ziel:'An 6 von 7 Nächten 7½ Stunden, höchstens einmal aufwachen.'},
          {name:'Kraft', ziel:'4× pro Woche Training, jeden Monat ein bisschen stärker.'},
          {name:'Ernährung', ziel:'An 5 von 7 Tagen nach Plan essen.'}],
@@ -1461,7 +1468,7 @@ const BEISPIEL = {name:'Gesundheit', wert:8,
   schwer:[{text:'Wache nachts zwei- bis dreimal auf', g:7, schritt:'Ab 19 Uhr nichts mehr trinken'},
           {text:'Am Wochenende esse ich, was gerade da ist', g:4, schritt:'Samstags für zwei Tage vorkochen'}]};
 function beispielHtml(offen){
-  const e = BEISPIEL, st = standort(e), s = summen(e);
+  const e = BEISPIEL;
   const zeile = (x, mitSchritt) => `<span class="z">${esc(x.text)} · Gewicht <span class="g">${x.g}</span>${
     mitSchritt ? `<br>Nächster Schritt: ${esc(x.schritt)}` : ''}</span>`;
   return `<details class="bsp"${offen ? ' open' : ''}><summary>So sieht ein fertiger Bereich aus — ein Beispiel</summary>
@@ -1478,11 +1485,11 @@ function beispielHtml(offen){
       erster konkreter Schritt, denn daraus wird am Ende das Ziel:
       ${e.schwer.map(x => zeile(x, true)).join('')}</li>
   </ol>
-  <p class="hint">Daraus rechnet der Test den <b>Standort</b>: ${s.s} Punkte Stärken gegen ${s.h}
-  Punkte Lücken ergeben <b>${zahl1(st)}</b>.${LUECKE_FAKTOR !== 1 ? ` Lücken zählen dabei ${zahl1(LUECKE_FAKTOR)}-fach, weil Fehlendes
-  im Alltag stärker bremst, als Vorhandenes trägt.` : ''} Das sind ${zahl1(e.wert - st)} weniger als die ${zahl(e.wert)} aus dem Bauch.
-  Genau dieser Abstand ist die Erkenntnis: Was fehlt, wiegt oft schwerer, als es sich anfühlt.
-  Die Leiste ganz oben zeigt dir bei jedem Bereich, welcher der vier Schritte noch offen ist.</p>
+  <p class="hint">Zum Schluss schaut er auf beide Listen und <b>bewertet neu</b>: Das nächtliche
+  Aufwachen wiegt mehr, als er beim Ausmalen bedacht hat — er geht von ${zahl(e.wert)} auf
+  <b>${zahl(e.neu)}</b>. Hätte die Aufstellung nichts Neues gezeigt, wäre die ${zahl(e.wert)}
+  geblieben. Beides ist richtig: Lücken zeigen den Weg zu 100 %, sie senken den Stand nicht
+  automatisch. Die Leiste ganz oben zeigt dir bei jedem Bereich, was noch offen ist.</p>
   </details>`;
 }
 
@@ -1500,7 +1507,7 @@ function sprungHtml(b){
         ? (ohneSchritt(b) ? (b.schwer.length - ohneSchritt(b)) + '/' + b.schwer.length
                           : b.schwer.length)
         : '–', !b.schwer.length || ohneSchritt(b))}
-    ${k('stand', 'Standort', st !== null ? zahl1(st) : (oh ? oh + ' offen' : '–'), st === null)}
+    ${k('stand', 'Neu', b.neu ? zahl(b.wert) : (oh ? oh + ' offen' : '–'), !b.neu)}
   </div>`;
 }
 
@@ -1525,7 +1532,7 @@ function vertiefung(){
   ${sprungHtml(b)}
   <h2>Schritt 3 von 5 · Bereich ${vtIndex+1} von ${bereiche.length}</h2>
   <h1>${esc(b.name)}</h1>
-  <p>Aus dem Bauch hast du <b>${zahl(b.wert)}</b> gemalt. Diese Zahl misst gegen einen
+  <p>Aus dem Bauch hast du <b>${zahl(typeof b.vorher === 'number' ? b.vorher : b.wert)}</b> gemalt. Diese Zahl misst gegen einen
   Maßstab, den bisher nur du kennst — und den du selbst noch nicht aufgeschrieben hast.
   Das ist jetzt dran: <b>erst zerlegen, dann die Latte legen, dann zählen, was schon
   da ist und was fehlt.</b></p>
@@ -1600,7 +1607,7 @@ function vertiefung(){
     ${b.stark.length < MAX_ZEILEN
       ? `<button class="ghost" onclick="vtDazu('stark')">+ Stärke</button>`
       : `<span class="hint">Fünf reichen meist — nimm die, die am meisten wiegen.${b.stark.length > MAX_ZEILEN
-          ? ` Du hast ${b.stark.length}.` : ''} Gleich viele auf beiden Seiten halten die Rechnung fair.</span>
+          ? ` Du hast ${b.stark.length}.` : ''}</span>
          ${b.stark.length < HART_ZEILEN ? `<button class="ghost" style="font-size:13px;padding:6px 12px"
            onclick="vtDazu('stark')">trotzdem eine weitere</button>` : ''}`}
   </div>
@@ -1636,7 +1643,7 @@ function vertiefung(){
     ${b.schwer.length < MAX_ZEILEN
       ? `<button class="ghost" onclick="vtDazu('schwer')">+ Herausforderung</button>`
       : `<span class="hint">Fünf reichen meist — nimm die, die am meisten wiegen.${b.schwer.length > MAX_ZEILEN
-          ? ` Du hast ${b.schwer.length}.` : ''} Gleich viele auf beiden Seiten halten die Rechnung fair.</span>
+          ? ` Du hast ${b.schwer.length}.` : ''}</span>
          ${b.schwer.length < HART_ZEILEN ? `<button class="ghost" style="font-size:13px;padding:6px 12px"
            onclick="vtDazu('schwer')">trotzdem eine weitere</button>` : ''}`}
   </div>
@@ -1667,52 +1674,50 @@ function vertiefung(){
    Er wird einzeln neu gezeichnet, nicht ueber render() — sonst verliert das Feld,
    in dem gerade getippt wird, den Fokus. */
 function standHtml(b){
-  const st = standort(b);
+  /* 🔴 Frank 13.11.2026: „wie waere es nach dem bewusstmachen der Staerken und der
+     Schwaechen den testenden selbst dies neu bewerten zu lassen?" Frueher stand hier eine
+     gerechnete Quote (Staerken / Gesamtgewicht). Sie ergab bei gleich langen Listen immer
+     5,0 und zog jede Luecke vom Ist ab — wer gruendlich nach Luecken sucht, wurde bestraft.
+     Jetzt uebersetzt der Testende Staerken und Luecken selbst in einen Wert. Der erste
+     Wert bleibt als b.vorher erhalten, der neue steht in b.wert und zaehlt ab da. */
   const s0 = summen(b);
   const {s, h} = s0;
-  if (st === null && s0.ohne){
-    return `<div class="stand">
-      <div class="p">
-        <span><span class="lb">Gemalt</span><span class="bauch">${zahl(b.wert)}</span></span>
-        <span><span class="lb">Gerechnet</span><span class="rech">–</span></span>
-      </div>
+  const vor = typeof b.vorher === 'number' ? b.vorher : b.wert;
+  if (s0.ohne){
+    return `<div class="stand"><span class="lb">Neu bewerten</span>
       <p><b style="color:var(--goldl)">${s0.ohne} ${s0.ohne === 1 ? 'Zeile hat' :
-      'Zeilen haben'} noch kein Gewicht.</b> Solange rechne ich nicht — eine halbe Summe
-      wäre keine Einschätzung, sondern ein Artefakt. Das Gewicht ist an dieser Stelle die
-      eigentliche Arbeit: <b>ohne es sind alle Zeilen gleich wichtig, und das sind sie nie.</b></p>
-      </div>`;
+      'Zeilen haben'} noch kein Gewicht.</b> Das Gewicht ist an dieser Stelle die
+      eigentliche Arbeit: <b>ohne es sind alle Zeilen gleich wichtig, und das sind sie nie.</b>
+      Danach bewertest du den Bereich hier neu.</p></div>`;
   }
-  if (st === null){
-    return `<div class="stand"><span class="lb">Standort</span>
-      <p style="margin-top:4px">Sobald Stärken und Herausforderungen <b>mit Gewicht</b>
-      dastehen, rechnet sich hier ein zweiter Wert für diesen Bereich — unabhängig von dem,
-      den du gemalt hast.</p></div>`;
+  if (!s && !h){
+    return `<div class="stand"><span class="lb">Neu bewerten</span>
+      <p style="margin-top:4px">Sobald Stärken und Lücken <b>mit Gewicht</b> dastehen,
+      bewertest du den Bereich hier ein zweites Mal — mit allem vor Augen, was du
+      aufgeschrieben hast.</p></div>`;
   }
-  const d = st - b.wert;
-  const sch = schief(b);
-  return `<div class="stand">
+  const d = b.neu ? b.wert - vor : 0;
+  return `<div class="stand"><span class="lb">Neu bewerten</span>
+    <p style="margin-top:4px">Du hast jetzt <b>${s} Punkte Stärken</b> und <b>${h} Punkte
+    Lücken</b> vor dir. Mit diesem Blick: <b>wie bewertest du ${esc(b.name)} heute?</b></p>
     <div class="p">
-      <span><span class="lb">Gemalt</span><span class="bauch">${zahl(b.wert)}</span></span>
-      <span><span class="lb">Gerechnet</span><span class="rech">${zahl1(st)}</span></span>
-      <span class="hint">${s} Punkte Stärken gegen ${h} Punkte Herausforderungen${LUECKE_FAKTOR !== 1 ? ` · Lücken zählen ${zahl1(LUECKE_FAKTOR)}-fach` : ''}</span>
+      <span><span class="lb">Vorher</span><span class="bauch">${zahl(vor)}</span></span>
+      <span><span class="lb">Jetzt</span><span class="rech" id="neuZahl">${b.neu ? zahl(b.wert) : '–'}</span></span>
     </div>
-    ${Math.abs(d) < 0.5
-      ? `<p>Gefühl und Rechnung liegen dicht beieinander. Deine ${zahl(b.wert)} hält
-         der eigenen Aufstellung stand.</p>`
-      : `<p>${d < 0
-          ? `Die Aufstellung ergibt <b>${zahl1(Math.abs(d))} Punkte weniger</b>, als du
-             gemalt hast. Das ist die Richtung, in der man Schwächen übersieht — was
-             fehlt, wiegt schwerer als es sich anfühlt.`
-          : `Die Aufstellung ergibt <b>${zahl1(Math.abs(d))} Punkte mehr</b>, als du
-             gemalt hast. Meist färbt dann ein einzelner Punkt das ganze Urteil.`}</p>
-         <div class="nav" style="margin-top:12px">
-           <button class="ghost" onclick="vtRad(${st})">Radwert auf ${zahl1(st)} ändern</button>
-           <span class="hint">oder stehen lassen — beide Zahlen werden gespeichert</span>
-         </div>`}
-    ${sch ? `<p class="hint" style="margin-top:10px">Du hast ${sch.a} Stärken und
-      ${sch.c} Herausforderungen aufgeschrieben. Die Rechnung vergleicht Gewicht gegen
-      Gewicht: wenn eine Seite kürzer ist, weil du dort weniger nachgedacht hast,
-      verschiebt das die Zahl, nicht die Lage.</p>` : ''}
+    <input type="range" min="0" max="10" step="0.5" value="${b.wert}"
+      style="width:100%;accent-color:var(--gold);margin:6px 0 4px"
+      aria-label="Neue Bewertung ${esc(b.name)}"
+      oninput="document.getElementById('neuZahl').textContent=zahl(+this.value)"
+      onchange="vtNeu(this.value)">
+    ${b.neu ? '' : `<div class="nav" style="margin-top:8px">
+      <button class="ghost" onclick="vtNeu(${b.wert})">Bleibt bei ${zahl(b.wert)}</button></div>`}
+    <p class="hint" style="margin-top:8px">${b.neu
+      ? (Math.abs(d) < 0.5
+          ? 'Die Zahl hat sich nicht bewegt — sie ist jetzt gut begründet.'
+          : `Die Vertiefung hat deinen Blick um ${zahl(Math.abs(d))} ${Math.abs(d) === 1 ? 'Punkt' : 'Punkte'}
+             ${d > 0 ? 'nach oben' : 'nach unten'} verschoben. Beide Werte werden gespeichert.`)
+      : `Lücken zeigen, wo der Weg zu 100 % liegt — sie senken deinen Stand nicht
+         automatisch. Bleibt die Zahl gleich, ist das ein gutes Zeichen.`}</p>
   </div>`;
 }
 function standNeu(){
@@ -1735,6 +1740,16 @@ function vtG(feld, i, v){
   const sel = document.querySelector(`.row select[onchange*="${feld}',${i},"]`);
   if (sel) sel.classList.toggle('unset', x.g === null);
   standNeu(); entwurfMerken();
+}
+function vtNeu(w){
+  const b = bereiche[vtIndex];
+  if (typeof b.vorher !== 'number') b.vorher = b.wert;
+  b.wert = Math.round(+w * 2) / 2;                   // das Rad kennt nur halbe Schritte
+  b.neu = true;
+  standNeu();
+  const j = document.querySelector('.jump');
+  if (j) j.outerHTML = sprungHtml(b);
+  entwurfMerken();
 }
 function vtRad(w){
   bereiche[vtIndex].wert = Math.round(w * 2) / 2;   // das Rad kennt nur halbe Schritte
@@ -1899,7 +1914,7 @@ function verlaufSchreiben(v){
 function messung(){
   return {datum: new Date().toISOString().slice(0,10),
           bereiche: bereiche.map(b => ({name:b.name, wert:b.wert, ess:b.ess || null,
-            stand: standort(b),
+            vorher: typeof b.vorher === 'number' ? b.vorher : null,
             rang: typeof b.rang === 'number' ? b.rang : null,
             vision: b.vision || '',
             unter:  (b.unter  || []).map(u => ({name:u.name, ziel:u.ziel || ''})),
@@ -2045,47 +2060,46 @@ function verlaufHtml(){
    niemand, weil es Rechnen heisst — und deshalb bleibt die Differenz dort unsichtbar.
    Benannt wird sie ab einem halben Punkt; darunter ist es Rauschen. */
 function gegenHtml(){
-  const mit = bereiche.filter(b => standort(b) !== null);
-  if (!mit.length) return `<p class="hint">Du hast die Vertiefung übersprungen. Damit ist
-    das hier dasselbe Rad, das du auch auf Papier malen würdest — die 100%-Definition
-    <a href="#" onclick="vtIndex=0;vtIdeen=false;seite=2;render();return false"
+  /* Vorher gegen nachher: der Wert aus dem Bauch gegen den Wert nach der Vertiefung.
+     Die Verschiebung ist das Signal — was die Reflexion am Blick geaendert hat. */
+  const mit = bereiche.filter(b => b.neu);
+  if (!mit.length) return `<p class="hint">Du hast noch keinen Bereich nach der Vertiefung
+    neu bewertet. Damit ist das hier dasselbe Rad, das du auch auf Papier malen würdest —
+    die Vertiefung <a href="#" onclick="zurVertiefung();return false"
     style="color:var(--gold)">nachholen</a> kannst du jederzeit.</p>`;
 
-  const paare = mit.map(b => ({b, m: standort(b), d: standort(b) - b.wert}));
-  const auffaellig = paare.filter(p => Math.abs(p.d) >= 0.5)
+  const vor = b => typeof b.vorher === 'number' ? b.vorher : b.wert;
+  const paare = mit.map(b => ({b, v: vor(b), d: b.wert - vor(b)}));
+  const bewegt = paare.filter(p => Math.abs(p.d) >= 0.5)
     .sort((a,b) => Math.abs(b.d) - Math.abs(a.d));
   const offen = bereiche.length - mit.length;
 
   let h = '';
-  if (!auffaellig.length){
-    h += `<p>Deine gemalten Werte und die Aufstellungen liegen überall weniger als einen
-      halben Punkt auseinander. Das heißt: du schätzt diese Bereiche so ein, wie deine
-      eigene Aufstellung es hergibt — dein Gefühl ist hier ein verlässliches Instrument.</p>`;
+  if (!bewegt.length){
+    h += `<p>Nach der Vertiefung hast du keinen Bereich anders bewertet als vorher. Deine
+      Werte halten der eigenen Aufstellung stand.</p>`;
   } else {
-    const p = auffaellig[0];
-    h += `<p>Bei <b>${esc(p.b.name)}</b> gehen Gefühl und Rechnung am weitesten
-      auseinander: gemalt <b>${zahl(p.b.wert)}</b>, gerechnet <b>${zahl1(p.m)}</b>.
+    const p = bewegt[0];
+    h += `<p>Am stärksten hat die Vertiefung deinen Blick auf <b>${esc(p.b.name)}</b>
+      verschoben: von <b>${zahl(p.v)}</b> auf <b>${zahl(p.b.wert)}</b>.
       ${p.d < 0
-        ? `Du bewertest den Bereich also besser, als deine eigene Aufstellung hergibt —
-           das ist die Richtung, in der man Schwächen übersieht.`
-        : `Du bewertest den Bereich strenger, als deine eigene Aufstellung hergibt — oft
-           steckt dahinter ein einzelner Punkt, der das ganze Urteil färbt.`}</p>`;
+        ? 'Beim Aufschreiben ist dort etwas sichtbar geworden, das beim Ausmalen noch nicht da war.'
+        : 'Beim Aufschreiben hast du dort mehr gefunden, das schon trägt, als du beim Ausmalen gesehen hast.'}</p>`;
   }
   h += `<div class="gegen">${paare.map(p => {
     const su = summen(p.b);
     return `
     <div class="gg">
       <div class="k">${esc(p.b.name)}</div>
-      <div class="p"><span class="bauch">${zahl(p.b.wert)}</span>
-        <span class="rech">${zahl1(p.m)}</span></div>
-      <div class="d">gemalt · gerechnet${Math.abs(p.d) >= 0.5
-        ? ` — ${p.d > 0 ? '+' : '−'}${zahl1(Math.abs(p.d))}` : ' — deckungsgleich'}
-        <br>${su.s} Stärken- gegen ${su.h} Herausforderungspunkte</div>
+      <div class="p"><span class="bauch">${zahl(p.v)}</span>
+        <span class="rech">${zahl(p.b.wert)}</span></div>
+      <div class="d">vorher · nachher${Math.abs(p.d) >= 0.5
+        ? ` — ${p.d > 0 ? '+' : '−'}${zahl(Math.abs(p.d))}` : ' — unverändert'}
+        <br>${su.s} Stärken- gegen ${su.h} Lückenpunkte</div>
     </div>`; }).join('')}</div>`;
-  if (offen) h += `<p class="hint">${offen === 1 ? 'Ein Bereich hat' : offen + ' Bereiche haben'}
-    noch keine vollständige Aufstellung — keine Stärken und Herausforderungen, oder Zeilen
-    ohne Gewicht — und ${offen === 1 ? 'steht' : 'stehen'} deshalb nur mit dem gemalten
-    Wert da.</p>`;
+  if (offen) h += `<p class="hint">${offen === 1 ? 'Ein Bereich ist' : offen + ' Bereiche sind'}
+    noch nicht neu bewertet und ${offen === 1 ? 'steht' : 'stehen'} mit dem Wert aus dem
+    Bauch da.</p>`;
   return h;
 }
 
@@ -2151,10 +2165,9 @@ function radText(){
   const d = new Date().toLocaleDateString('de-DE');
   const z = ['LEBENSRAD — ' + d, ''];
   raenge().forEach((b,i) => {
-    const st = standort(b);
     z.push(`${i+1}. ${b.name}: ${zahl1(wertVon(b))} von 10`
       + (b.ess ? '   (essenziell)' : '')
-      + (st !== null && Math.abs(st - b.wert) >= 1 ? `   [Bauchwert ${zahl1(b.wert)}]` : ''));
+      + (typeof b.vorher === 'number' && b.vorher !== b.wert ? `   [vorher ${zahl1(b.vorher)}]` : ''));
   });
   const s = schwaechster();
   if (s) z.push('', 'Schwaechster Bereich: ' + s.name + ' (' + zahl1(wertVon(s)) + ')');
